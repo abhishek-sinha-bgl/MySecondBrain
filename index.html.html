@@ -1,0 +1,2894 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MySecondBrain — Research Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-base: #0d0f14;
+    --bg-panel: #12151c;
+    --bg-card: #181c26;
+    --bg-hover: #1e2230;
+    --bg-input: #141720;
+    --border: #232840;
+    --border-subtle: #1a1e2e;
+    --accent: #4f8fff;
+    --accent-glow: rgba(79,143,255,0.15);
+    --accent-2: #ff6b6b;
+    --accent-3: #50e3c2;
+    --accent-pin: #ff6b6b;
+    --text-primary: #e8ecf4;
+    --text-secondary: #a8b2c8;
+    --text-muted: #6b7590;
+    --gold: #f0c040;
+    --success: #50e3c2;
+    --warning: #ffaa40;
+    --font-display: 'Plus Jakarta Sans', sans-serif;
+    --font-mono: 'DM Mono', monospace;
+    --font-body: 'DM Sans', sans-serif;
+    --radius: 10px;
+    --radius-sm: 6px;
+    --transition: 0.18s ease;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--font-body);
+    background: var(--bg-base);
+    color: var(--text-primary);
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── TOPBAR ── */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    height: 52px;
+    border-bottom: 1px solid var(--border-subtle);
+    background: var(--bg-panel);
+    flex-shrink: 0;
+    z-index: 10;
+  }
+  .topbar-logo {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 16px;
+    letter-spacing: -0.3px;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .topbar-logo .logo-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+    animation: pulse 2.5s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.6;transform:scale(0.85)} }
+  .topbar-center {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-family: var(--font-display);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    color: var(--text-secondary);
+  }
+  .session-label { color: var(--text-primary); }
+  .tone-select {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    font-family: var(--font-body);
+    font-size: 12px;
+    padding: 5px 10px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    outline: none;
+    transition: border-color var(--transition);
+  }
+  .tone-select:hover { border-color: var(--accent); color: var(--text-primary); }
+  .topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .status-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+  }
+  .status-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--success);
+    box-shadow: 0 0 6px var(--success);
+  }
+  .status-dot.idle { background: var(--text-muted); box-shadow: none; }
+  .status-dot.thinking { background: var(--warning); box-shadow: 0 0 6px var(--warning); animation: pulse 1s infinite; }
+  .btn-icon {
+    width: 32px; height: 32px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+    transition: all var(--transition);
+  }
+  .btn-icon:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── LAYOUT ── */
+  .app-body {
+    display: grid;
+    grid-template-columns: 260px 1fr 300px;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* ── LEFT PANEL ── */
+  .panel-left {
+    background: var(--bg-panel);
+    border-right: 1px solid var(--border-subtle);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .panel-section {
+    padding: 16px;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .panel-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .panel-section-title {
+    font-family: var(--font-display);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: #7a8aaa;
+  }
+  .btn-clear, .btn-add {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    background: none;
+    border: none;
+    cursor: pointer;
+    letter-spacing: 0.5px;
+    transition: color var(--transition);
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+  }
+  .btn-clear:hover { color: var(--accent-2); }
+  .btn-add {
+    width: 22px; height: 22px;
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    font-size: 14px;
+    padding: 0;
+  }
+  .btn-add:hover { color: var(--accent); border-color: var(--accent); }
+
+  .history-list { display: flex; flex-direction: column; gap: 4px; }
+  .history-item {
+    font-size: 12px;
+    color: #9aa6be;
+    padding: 6px 8px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all var(--transition);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    border: 1px solid transparent;
+  }
+  .history-item:hover { background: var(--bg-hover); color: var(--text-primary); border-color: var(--border); }
+  .history-empty {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: #6b7590;
+    font-style: italic;
+  }
+
+  .pinned-section { flex: 1; overflow-y: auto; padding: 16px; }
+  .pinned-section::-webkit-scrollbar { width: 3px; }
+  .pinned-section::-webkit-scrollbar-track { background: transparent; }
+  .pinned-section::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .pinned-list { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
+  .pinned-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: all var(--transition);
+    position: relative;
+    group: true;
+  }
+  .pinned-item:hover { border-color: var(--accent-pin); background: var(--bg-hover); }
+  .pinned-item.active { border-color: var(--accent-pin); background: rgba(255,107,107,0.08); }
+  .pin-icon { font-size: 13px; flex-shrink: 0; }
+  .pin-label {
+    font-size: 13px;
+    font-weight: 500;
+    flex: 1;
+    color: #ccd4e8;
+  }
+  .pin-remove {
+    opacity: 0;
+    font-size: 11px;
+    color: var(--text-muted);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 2px;
+    transition: opacity var(--transition);
+  }
+  .pinned-item:hover .pin-remove { opacity: 1; }
+  .pin-remove:hover { color: var(--accent-2); }
+
+  .add-topic-form {
+    display: none;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .add-topic-form.visible { display: flex; }
+  .topic-input {
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    font-size: 13px;
+    padding: 8px 10px;
+    border-radius: var(--radius-sm);
+    outline: none;
+    transition: border-color var(--transition);
+  }
+  .topic-input:focus { border-color: var(--accent); }
+  .topic-input::placeholder { color: var(--text-muted); }
+  .add-topic-btns { display: flex; gap: 6px; }
+  .btn-sm {
+    flex: 1;
+    padding: 6px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: all var(--transition);
+    letter-spacing: 0.5px;
+  }
+  .btn-sm.confirm { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn-sm.confirm:hover { background: #3d7aef; }
+  .btn-sm.cancel { background: transparent; color: var(--text-muted); }
+  .btn-sm.cancel:hover { color: var(--text-primary); border-color: var(--border); }
+
+  .api-status {
+    padding: 12px 16px;
+    border-top: 1px solid var(--border-subtle);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: background var(--transition);
+  }
+  .api-status:hover { background: var(--bg-hover); }
+  .api-key-icon { font-size: 14px; }
+  .api-key-text {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-secondary);
+    flex: 1;
+  }
+  .api-key-text .active { color: var(--success); }
+  .api-key-text .missing { color: var(--accent-2); }
+
+  /* ── CENTER PANEL ── */
+  .panel-center {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .topic-filter-bar {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: rgba(255,107,107,0.06);
+    border-bottom: 1px solid rgba(255,107,107,0.2);
+    font-size: 12px;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+  }
+  .topic-filter-bar.visible { display: flex; }
+  .filter-tag {
+    display: flex; align-items: center; gap: 5px;
+    background: rgba(255,107,107,0.12);
+    border: 1px solid rgba(255,107,107,0.3);
+    border-radius: 20px;
+    padding: 3px 10px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--accent-pin);
+  }
+
+  .chat-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    scroll-behavior: smooth;
+  }
+  .chat-area::-webkit-scrollbar { width: 4px; }
+  .chat-area::-webkit-scrollbar-track { background: transparent; }
+  .chat-area::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .chat-empty {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    text-align: center;
+    color: var(--text-muted);
+    padding: 40px;
+  }
+  .chat-empty-icon {
+    font-size: 40px;
+    opacity: 0.3;
+    margin-bottom: 8px;
+  }
+  .chat-empty h2 {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    letter-spacing: -0.5px;
+  }
+  .chat-empty p {
+    font-size: 13px;
+    max-width: 380px;
+    line-height: 1.6;
+  }
+
+  .msg {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    animation: fadeSlideIn 0.25s ease;
+  }
+  @keyframes fadeSlideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+  .msg-user {
+    align-self: flex-end;
+    max-width: 72%;
+  }
+  .msg-user .bubble {
+    background: var(--accent);
+    background: linear-gradient(135deg, #4f8fff, #3d7aef);
+    color: #fff;
+    padding: 11px 16px;
+    border-radius: 18px 18px 4px 18px;
+    font-size: 14px;
+    line-height: 1.5;
+    box-shadow: 0 4px 16px rgba(79,143,255,0.2);
+  }
+  .msg-ai { align-self: flex-start; max-width: 90%; }
+  .msg-ai .bubble {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    padding: 14px 18px;
+    border-radius: 4px 18px 18px 18px;
+    font-size: 14px;
+    line-height: 1.65;
+    color: var(--text-primary);
+  }
+  .msg-ai .bubble h3 {
+    font-family: var(--font-display);
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: var(--accent);
+  }
+  .msg-ai .bubble p { margin-bottom: 8px; }
+  .msg-ai .bubble p:last-child { margin-bottom: 0; }
+  .msg-ai .bubble ul { padding-left: 18px; }
+  .msg-ai .bubble li { margin-bottom: 5px; }
+  .msg-ai .bubble strong { color: var(--text-primary); }
+  .msg-meta {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    padding: 0 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .msg-user .msg-meta { justify-content: flex-end; }
+  .source-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
+  .source-chip {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    background: var(--bg-hover);
+    border: 1px solid var(--border);
+    padding: 2px 8px;
+    border-radius: 20px;
+    cursor: default;
+  }
+  .source-chip.web { color: var(--accent-3); border-color: rgba(80,227,194,0.25); }
+  .source-chip.news { color: var(--gold); border-color: rgba(240,192,64,0.25); }
+
+  .deep-research-banner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 18px;
+    background: linear-gradient(90deg, rgba(79,143,255,0.08), rgba(80,227,194,0.06));
+    border: 1px solid rgba(79,143,255,0.2);
+    border-radius: var(--radius);
+    margin: 4px 0;
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+  .deep-research-banner .deep-icon { font-size: 16px; }
+
+  .thinking-indicator {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 18px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 4px 18px 18px 18px;
+    align-self: flex-start;
+    animation: fadeSlideIn 0.2s ease;
+  }
+  .thinking-dots { display: flex; gap: 4px; }
+  .thinking-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: thinkBounce 1.2s infinite;
+  }
+  .thinking-dot:nth-child(2) { animation-delay: 0.2s; }
+  .thinking-dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes thinkBounce { 0%,60%,100%{transform:translateY(0);opacity:0.4} 30%{transform:translateY(-5px);opacity:1} }
+  .thinking-label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    font-style: italic;
+  }
+
+  /* ── INPUT BAR ── */
+  .input-area {
+    padding: 16px 20px 20px;
+    border-top: 1px solid var(--border-subtle);
+    background: var(--bg-panel);
+    flex-shrink: 0;
+  }
+  .input-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 10px 14px;
+    transition: border-color var(--transition), box-shadow var(--transition);
+    margin-bottom: 12px;
+  }
+  .input-row:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+  .main-input {
+    flex: 1;
+    background: none;
+    border: none;
+    outline: none;
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    font-size: 14px;
+    line-height: 1.4;
+    resize: none;
+    max-height: 120px;
+    min-height: 22px;
+  }
+  .main-input::placeholder { color: var(--text-muted); }
+  .web-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: #7a8aaa;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 20px;
+    border: 1px solid transparent;
+    transition: all var(--transition);
+    white-space: nowrap;
+  }
+  .web-toggle:hover { border-color: var(--border); color: var(--text-secondary); }
+  .web-toggle.active { color: var(--accent-3); border-color: rgba(80,227,194,0.3); background: rgba(80,227,194,0.06); }
+  .web-toggle input { display: none; }
+  .globe-icon { font-size: 13px; }
+  .send-btn {
+    background: var(--accent);
+    border: none;
+    border-radius: 10px;
+    width: 36px; height: 36px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    font-size: 15px;
+    color: #fff;
+    transition: all var(--transition);
+    flex-shrink: 0;
+    box-shadow: 0 2px 12px rgba(79,143,255,0.3);
+  }
+  .send-btn:hover { background: #3d7aef; transform: scale(1.05); }
+  .send-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  .action-btns {
+    display: flex;
+    gap: 8px;
+  }
+  .action-btn {
+    flex: 1;
+    padding: 9px 12px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    cursor: pointer;
+    transition: all var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    text-transform: none;
+  }
+  .action-btn:hover { color: var(--text-primary); border-color: var(--text-secondary); }
+  .action-btn.primary {
+    background: linear-gradient(135deg, #2a4a8a, #1e3a7a);
+    border-color: var(--accent);
+    color: #a0c0ff;
+  }
+  .action-btn.primary:hover { background: linear-gradient(135deg, #3a5a9a, #2e4a8a); color: #fff; box-shadow: 0 0 16px rgba(79,143,255,0.2); }
+  .action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .action-btn .btn-icon-inner { font-size: 13px; }
+
+  /* ── RIGHT PANEL ── */
+  .panel-right {
+    background: var(--bg-panel);
+    border-left: 1px solid var(--border-subtle);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .takeaways-header {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border-subtle);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .takeaways-title {
+    font-family: var(--font-display);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: #7a8aaa;
+  }
+  .count-toggle {
+    display: flex;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    overflow: hidden;
+  }
+  .count-btn {
+    padding: 3px 10px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all var(--transition);
+  }
+  .count-btn.active { background: var(--accent); color: #fff; }
+
+  .takeaways-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .takeaways-list::-webkit-scrollbar { width: 3px; }
+  .takeaways-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .takeaway-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    gap: 8px;
+    text-align: center;
+    padding: 20px;
+  }
+  .takeaway-empty-icon { font-size: 32px; opacity: 0.2; }
+  .takeaway-empty p {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.6;
+    font-style: italic;
+  }
+
+  .takeaway-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px;
+    animation: fadeSlideIn 0.3s ease;
+    transition: all var(--transition);
+    position: relative;
+  }
+  .takeaway-card:hover { border-color: var(--accent); }
+  .takeaway-card.updated { border-color: var(--accent-3); animation: flashUpdate 1s ease; }
+  @keyframes flashUpdate { 0%{box-shadow:0 0 0 2px rgba(80,227,194,0.4)} 100%{box-shadow:none} }
+  .takeaway-num {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--accent);
+    margin-bottom: 6px;
+    letter-spacing: 1px;
+  }
+  .takeaway-text {
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--text-primary);
+    font-weight: 500;
+    margin-bottom: 8px;
+    cursor: text;
+    outline: none;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    padding: 2px;
+    transition: border-color var(--transition);
+  }
+  .takeaway-text:focus { border-color: var(--border); background: var(--bg-input); }
+  .takeaway-why {
+    font-size: 12px;
+    color: #8fa0bc;
+    line-height: 1.5;
+    font-style: italic;
+    border-top: 1px solid var(--border-subtle);
+    padding-top: 7px;
+    margin-top: 4px;
+  }
+  .takeaway-why strong { color: #b0c0d8; font-style: normal; }
+  .takeaway-actions {
+    display: flex;
+    gap: 4px;
+    margin-top: 8px;
+  }
+  .takeaway-action-btn {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    background: none;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    padding: 2px 6px;
+    cursor: pointer;
+    transition: all var(--transition);
+  }
+  .takeaway-action-btn:hover { border-color: var(--border); color: var(--text-secondary); }
+  .takeaway-action-btn.pin-to-topic { color: var(--accent-pin); }
+  .takeaway-action-btn.pin-to-topic:hover { border-color: var(--accent-pin); background: rgba(255,107,107,0.06); }
+
+  .export-section {
+    padding: 14px 16px;
+    border-top: 1px solid var(--border-subtle);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .export-label {
+    font-family: var(--font-display);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 2px;
+  }
+  .export-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+  .export-btn {
+    flex: 1;
+    min-width: calc(50% - 3px);
+    padding: 7px 8px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: all var(--transition);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    justify-content: center;
+  }
+  .export-btn:hover { color: var(--text-primary); border-color: var(--text-secondary); }
+  .export-btn .e-icon { font-size: 13px; }
+  .export-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  /* ── API MODAL ── */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(6px);
+    z-index: 100;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.15s ease;
+  }
+  .modal-overlay.visible { display: flex; }
+  @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+  .modal {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    width: 460px;
+    max-width: 90vw;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    animation: slideUp 0.2s ease;
+  }
+  @keyframes slideUp { from{transform:translateY(12px);opacity:0} to{transform:translateY(0);opacity:1} }
+  .modal-title {
+    font-family: var(--font-display);
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    margin-bottom: 6px;
+  }
+  .modal-subtitle {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 24px;
+    line-height: 1.5;
+  }
+  .modal-subtitle a { color: var(--accent); text-decoration: none; }
+  .modal-subtitle a:hover { text-decoration: underline; }
+  .api-provider-tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 16px;
+  }
+  .provider-tab {
+    flex: 1;
+    padding: 8px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    cursor: pointer;
+    text-align: center;
+    transition: all var(--transition);
+    letter-spacing: 0.5px;
+  }
+  .provider-tab:hover { color: var(--text-primary); border-color: var(--text-secondary); }
+  .provider-tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .api-field { margin-bottom: 14px; }
+  .api-field label {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+    letter-spacing: 0.5px;
+  }
+  .api-input-wrap { position: relative; }
+  .api-input {
+    width: 100%;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    padding: 10px 40px 10px 12px;
+    border-radius: var(--radius-sm);
+    outline: none;
+    transition: border-color var(--transition);
+  }
+  .api-input:focus { border-color: var(--accent); }
+  .toggle-visibility {
+    position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+    background: none; border: none; cursor: pointer; color: var(--text-muted);
+    font-size: 14px; transition: color var(--transition);
+  }
+  .toggle-visibility:hover { color: var(--text-primary); }
+  .modal-note {
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.6;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    margin-bottom: 18px;
+  }
+  .modal-note .shield { color: var(--success); margin-right: 4px; }
+  .modal-actions { display: flex; gap: 8px; }
+  .modal-btn {
+    flex: 1;
+    padding: 11px;
+    border-radius: var(--radius);
+    font-family: var(--font-display);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 0.3px;
+    transition: all var(--transition);
+  }
+  .modal-btn.save { background: var(--accent); border: none; color: #fff; box-shadow: 0 4px 16px rgba(79,143,255,0.3); }
+  .modal-btn.save:hover { background: #3d7aef; }
+  .modal-btn.close { background: none; border: 1px solid var(--border); color: var(--text-secondary); }
+  .modal-btn.close:hover { border-color: var(--text-secondary); color: var(--text-primary); }
+
+  /* ── PROGRESS BAR ── */
+  .progress-bar-wrap {
+    display: none;
+    padding: 0 20px 12px;
+    flex-shrink: 0;
+  }
+  .progress-bar-wrap.visible { display: block; }
+  .progress-bar-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    letter-spacing: 0.5px;
+    display: flex;
+    justify-content: space-between;
+  }
+  .progress-bar {
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent-3));
+    border-radius: 2px;
+    transition: width 0.3s ease;
+    width: 0%;
+  }
+
+  /* ── TOAST ── */
+  .toast-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .toast {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    font-size: 13px;
+    color: var(--text-primary);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    animation: slideInRight 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    max-width: 320px;
+  }
+  @keyframes slideInRight { from{transform:translateX(20px);opacity:0} to{transform:translateX(0);opacity:1} }
+  .toast.success { border-color: var(--success); }
+  .toast.error { border-color: var(--accent-2); }
+  .toast-icon { font-size: 15px; }
+
+  /* Scrollbar global */
+  * { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+
+  /* ── CITATIONS ── */
+  .citation-sup {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 16px; height: 16px; border-radius: 50%;
+    background: rgba(79,143,255,0.2); border: 1px solid rgba(79,143,255,0.4);
+    color: var(--accent); font-size: 9px; font-family: var(--font-mono);
+    font-weight: 600; cursor: pointer; vertical-align: super;
+    margin: 0 1px; transition: all 0.15s ease; text-decoration: none;
+    line-height: 1;
+  }
+  .citation-sup:hover { background: var(--accent); color: #fff; transform: scale(1.15); }
+  .sources-bar {
+    margin-top: 10px; border-top: 1px solid var(--border-subtle);
+    padding-top: 8px; display: flex; flex-direction: column; gap: 4px;
+  }
+  .sources-bar-title {
+    font-family: var(--font-mono); font-size: 10px; color: var(--text-muted);
+    letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px;
+  }
+  .source-item {
+    display: flex; align-items: flex-start; gap: 8px;
+    font-size: 11px; color: var(--text-secondary); line-height: 1.4;
+  }
+  .source-num {
+    flex-shrink: 0; width: 16px; height: 16px; border-radius: 50%;
+    background: rgba(79,143,255,0.15); border: 1px solid rgba(79,143,255,0.3);
+    color: var(--accent); font-size: 9px; font-family: var(--font-mono);
+    font-weight: 600; display: flex; align-items: center; justify-content: center;
+  }
+  .source-link { color: var(--accent); text-decoration: none; }
+  .source-link:hover { text-decoration: underline; }
+  .source-domain { color: var(--text-muted); font-family: var(--font-mono); font-size: 10px; margin-left: 4px; }
+
+  /* ── CONFIDENCE BADGE ── */
+  .confidence-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.5px;
+    padding: 2px 7px; border-radius: 20px; margin-left: 8px; vertical-align: middle;
+  }
+  .confidence-badge.high { background: rgba(80,227,194,0.12); border: 1px solid rgba(80,227,194,0.3); color: var(--success); }
+  .confidence-badge.medium { background: rgba(240,192,64,0.12); border: 1px solid rgba(240,192,64,0.3); color: var(--gold); }
+  .confidence-badge.low { background: rgba(255,107,107,0.12); border: 1px solid rgba(255,107,107,0.3); color: var(--accent-2); }
+  .confidence-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+
+  /* ── CONTRADICTION WARNING ── */
+  .contradiction-banner {
+    display: flex; align-items: flex-start; gap: 8px;
+    background: rgba(255,107,107,0.07); border: 1px solid rgba(255,107,107,0.25);
+    border-radius: 8px; padding: 10px 12px; margin-top: 8px; font-size: 12px;
+    color: #e8a0a0; line-height: 1.5;
+  }
+  .contradiction-icon { flex-shrink: 0; font-size: 14px; }
+  .takeaway-card.contradicted { border-color: rgba(255,107,107,0.4); }
+  .takeaway-contradiction-note {
+    font-size: 11px; color: var(--accent-2); font-style: italic;
+    margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255,107,107,0.2);
+  }
+
+  /* ── FOLLOW-UP CHIPS ── */
+  .followup-chips {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    padding: 8px 0 2px; align-self: flex-start; max-width: 90%;
+    animation: fadeSlideIn 0.3s ease;
+  }
+  .followup-chip {
+    font-size: 12px; color: var(--text-secondary);
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 20px; padding: 5px 12px; cursor: pointer;
+    transition: all 0.15s ease; line-height: 1.3;
+  }
+  .followup-chip:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-glow); }
+
+  /* ── SESSIONS ── */
+  .session-list { display: flex; flex-direction: column; gap: 4px; overflow-y: auto; max-height: 200px; }
+  .session-list::-webkit-scrollbar { width: 3px; }
+  .session-item {
+    display: flex; align-items: center; gap: 6px;
+    padding: 7px 10px; border-radius: 8px; cursor: pointer;
+    border: 1px solid transparent; transition: all 0.15s ease;
+    font-size: 12px; color: #9aa6be;
+  }
+  .session-item:hover { background: var(--bg-hover); border-color: var(--border); color: var(--text-primary); }
+  .session-item.active { border-color: var(--accent); background: var(--accent-glow); color: var(--accent); }
+  .session-date { font-family: var(--font-mono); font-size: 9px; color: var(--text-muted); margin-left: auto; flex-shrink: 0; }
+  .session-del { opacity: 0; font-size: 12px; color: var(--text-muted); background: none; border: none; cursor: pointer; padding: 0 2px; }
+  .session-item:hover .session-del { opacity: 1; }
+  .session-del:hover { color: var(--accent-2); }
+  .new-session-btn {
+    display: flex; align-items: center; gap: 6px; padding: 7px 10px;
+    border-radius: 8px; border: 1px dashed var(--border); background: none;
+    color: var(--text-muted); font-size: 12px; cursor: pointer; width: 100%;
+    font-family: var(--font-body); transition: all 0.15s ease; margin-top: 4px;
+  }
+  .new-session-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── STREAMING cursor ── */
+  .streaming-cursor {
+    display: inline-block; width: 2px; height: 14px;
+    background: var(--accent); margin-left: 2px; vertical-align: text-bottom;
+    animation: blink 0.7s infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+  /* ── COPY RESPONSE btn ── */
+  .copy-response-btn {
+    font-family: var(--font-mono); font-size: 10px; color: var(--text-muted);
+    background: none; border: 1px solid transparent; border-radius: 4px;
+    padding: 2px 6px; cursor: pointer; transition: all 0.15s ease;
+  }
+  .copy-response-btn:hover { border-color: var(--border); color: var(--text-secondary); }
+
+  /* ── COLLAPSE msg ── */
+  .msg-collapse-btn {
+    font-family: var(--font-mono); font-size: 10px; color: var(--text-muted);
+    background: none; border: none; cursor: pointer; padding: 2px 4px;
+    transition: color 0.15s ease;
+  }
+  .msg-collapse-btn:hover { color: var(--text-primary); }
+  .msg-ai.collapsed .bubble { max-height: 60px; overflow: hidden; mask-image: linear-gradient(to bottom, black 30px, transparent); -webkit-mask-image: linear-gradient(to bottom, black 30px, transparent); }
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="topbar-logo">
+    <div class="logo-dot"></div>
+    MySecondBrain
+  </div>
+  <div class="topbar-center">
+    <span class="session-label">Research Session</span>
+    <select class="tone-select" id="toneSelect">
+      <option value="standard">Standard Tone</option>
+      <option value="academic">Academic</option>
+      <option value="executive">Executive Brief</option>
+      <option value="casual">Casual</option>
+      <option value="critical">Critical Analysis</option>
+    </select>
+  </div>
+  <div class="topbar-right">
+    <div class="status-badge">
+      <div class="status-dot idle" id="statusDot"></div>
+      <span id="statusText">Ready</span>
+    </div>
+    <button class="btn-icon" title="New Session" onclick="clearSession()">↺</button>
+  </div>
+</div>
+
+<!-- APP BODY -->
+<div class="app-body">
+
+  <!-- LEFT PANEL -->
+  <div class="panel-left">
+    <div class="panel-section">
+      <div class="panel-section-header">
+        <span class="panel-section-title">Sessions</span>
+        <button class="btn-clear" onclick="newSession()">+ NEW</button>
+      </div>
+      <div class="session-list" id="sessionList"></div>
+    </div>
+    <div class="panel-section">
+      <div class="panel-section-header">
+        <span class="panel-section-title">Search History</span>
+        <button class="btn-clear" onclick="clearHistory()">CLEAR</button>
+      </div>
+      <div class="history-list" id="historyList">
+        <span class="history-empty">No recent searches...</span>
+      </div>
+    </div>
+
+    <div class="pinned-section">
+      <div class="panel-section-header">
+        <span class="panel-section-title">Pinned Topics</span>
+        <button class="btn-add" onclick="toggleAddTopic()" title="Add topic">+</button>
+      </div>
+      <div class="add-topic-form" id="addTopicForm">
+        <input class="topic-input" id="newTopicInput" placeholder="e.g. Climate Policy" maxlength="40" />
+        <div class="add-topic-btns">
+          <button class="btn-sm confirm" onclick="addTopic()">Add</button>
+          <button class="btn-sm cancel" onclick="toggleAddTopic()">Cancel</button>
+        </div>
+      </div>
+      <div class="pinned-list" id="pinnedList"></div>
+    </div>
+
+    <div class="api-status" onclick="openApiModal()">
+      <span class="api-key-icon">🔑</span>
+      <span class="api-key-text" id="apiKeyStatus">
+        <span class="missing">No API key — click to configure</span>
+      </span>
+    </div>
+  </div>
+
+  <!-- CENTER PANEL -->
+  <div class="panel-center">
+    <div class="topic-filter-bar" id="topicFilterBar">
+      <span style="color:var(--text-muted);font-size:11px;font-family:var(--font-mono)">SCOPE:</span>
+      <div class="filter-tag" id="filterTagLabel">📌 <span id="filterTagText"></span></div>
+      <span style="flex:1"></span>
+      <button style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:11px;" onclick="clearActiveFilter()">✕ clear</button>
+    </div>
+
+    <div class="chat-area" id="chatArea">
+      <div class="chat-empty" id="chatEmpty">
+        <div class="chat-empty-icon">🧠</div>
+        <h2>What would you like to research?</h2>
+        <p>Ask a question, explore a topic, or drag a document here. Pin topics on the left to keep responses focused.</p>
+      </div>
+    </div>
+
+    <div class="progress-bar-wrap" id="progressWrap">
+      <div class="progress-bar-label">
+        <span id="progressLabel">Conducting deep research...</span>
+        <span id="progressPct">0%</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+    </div>
+
+    <div class="input-area">
+      <div class="input-row">
+        <textarea class="main-input" id="mainInput" placeholder="Ask a question or enter a topic..." rows="1"
+          onkeydown="handleInputKey(event)" oninput="autoResize(this)"></textarea>
+        <label class="web-toggle active" id="webToggle" title="Toggle live web search">
+          <input type="checkbox" id="webCheck" checked onchange="toggleWeb()">
+          <span class="globe-icon">🌐</span>
+          Live Web
+        </label>
+        <button class="send-btn" id="sendBtn" onclick="sendMessage()" title="Send (Enter)">➤</button>
+      </div>
+      <div class="action-btns">
+        <button class="action-btn primary" id="deepBtn" onclick="doDeepResearch()">
+          <span class="btn-icon-inner">🔬</span> Deep Research
+        </button>
+        <button class="action-btn" id="saveLocalBtn" onclick="saveLocal()" disabled>
+          <span class="btn-icon-inner">⬇</span> Save Local
+        </button>
+        <button class="action-btn" id="notebookBtn" onclick="copyForNotebook()" disabled>
+          <span class="btn-icon-inner">📋</span> NotebookLM
+        </button>
+        <button class="action-btn" id="obsidianBtn" onclick="exportObsidian()" disabled>
+          <span class="btn-icon-inner">💎</span> Obsidian
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="panel-right">
+    <div class="takeaways-header">
+      <span class="takeaways-title">Key Takeaways</span>
+      <div class="count-toggle">
+        <button class="count-btn active" id="count3btn" onclick="setCount(3)">3</button>
+        <button class="count-btn" id="count5btn" onclick="setCount(5)">5</button>
+      </div>
+    </div>
+    <div class="takeaways-list" id="takeawaysList">
+      <div class="takeaway-empty">
+        <div class="takeaway-empty-icon">✦</div>
+        <p>Run a search to see key takeaways here. They'll update as you research.</p>
+      </div>
+    </div>
+    <div class="export-section">
+      <div class="export-label">Export Takeaways</div>
+      <div class="export-btns">
+        <button class="export-btn" onclick="copyMarkdown()" id="exportMdBtn" disabled>
+          <span class="e-icon">📝</span> Markdown
+        </button>
+        <button class="export-btn" onclick="exportPDF()" id="exportPdfBtn" disabled>
+          <span class="e-icon">📄</span> PDF
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- API MODAL -->
+<div class="modal-overlay" id="apiModal">
+  <div class="modal" style="width:520px;max-width:95vw;max-height:90vh;overflow-y:auto;">
+    <div class="modal-title">Configure Providers</div>
+    <div class="modal-subtitle">
+      Keys stored only in your browser, sent directly to each provider.&nbsp;
+      <a href="https://console.anthropic.com" target="_blank">Claude</a> &middot;
+      <a href="https://platform.openai.com" target="_blank">OpenAI</a> &middot;
+      <a href="https://aistudio.google.com" target="_blank">Gemini</a>
+    </div>
+    <div class="api-provider-tabs" style="flex-wrap:wrap;">
+      <button class="provider-tab active" onclick="selectProvider('claude')" id="tab-claude">Claude</button>
+      <button class="provider-tab" onclick="selectProvider('openai')" id="tab-openai">OpenAI</button>
+      <button class="provider-tab" onclick="selectProvider('gemini')" id="tab-gemini">Gemini</button>
+      <button class="provider-tab" onclick="selectProvider('custom')" id="tab-custom">+ Custom</button>
+    </div>
+    <div id="standardFields">
+      <div class="api-field">
+        <label id="apiKeyLabel">ANTHROPIC API KEY</label>
+        <div class="api-input-wrap">
+          <input type="password" class="api-input" id="apiKeyInput" placeholder="sk-ant-..." />
+          <button class="toggle-visibility" onclick="toggleApiVisibility('apiKeyInput')">&#128065;</button>
+        </div>
+      </div>
+      <div class="api-field">
+        <label>MODEL</label>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <select class="api-input" id="modelSelect" style="cursor:pointer;flex:1;"></select>
+          <input type="text" class="api-input" id="modelCustomInput" placeholder="type model name..." style="display:none;flex:1;" />
+          <button onclick="fetchLiveModels()" id="fetchModelsBtn" title="Fetch live models from provider API" style="white-space:nowrap;flex-shrink:0;padding:8px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg-card);color:var(--accent-3);font-family:var(--font-mono);font-size:11px;cursor:pointer;">&#8635; live</button>
+          <button onclick="toggleCustomModel()" id="customModelToggle" style="white-space:nowrap;flex-shrink:0;padding:8px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-secondary);font-family:var(--font-mono);font-size:11px;cursor:pointer;">custom</button>
+        </div>
+        <div style="margin-top:6px;font-family:var(--font-mono);font-size:10px;color:var(--text-muted);" id="modelHint"></div>
+      </div>
+    </div>
+    <div id="customFields" style="display:none;">
+      <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);margin-bottom:12px;line-height:1.6;">Add any OpenAI-compatible provider: Groq, Mistral, Together AI, Ollama (local), LM Studio, Perplexity, etc.</div>
+      <div class="api-field">
+        <label>PROVIDER NAME</label>
+        <input type="text" class="api-input" id="customName" placeholder="e.g. Groq, Mistral, Ollama..." />
+      </div>
+      <div class="api-field">
+        <label>API ENDPOINT (OpenAI-compatible)</label>
+        <input type="text" class="api-input" id="customEndpoint" placeholder="https://api.groq.com/openai/v1/chat/completions" />
+      </div>
+      <div class="api-field">
+        <label>API KEY</label>
+        <div class="api-input-wrap">
+          <input type="password" class="api-input" id="customKey" placeholder="your-api-key (or skip for local)" />
+          <button class="toggle-visibility" onclick="toggleApiVisibility('customKey')">&#128065;</button>
+        </div>
+      </div>
+      <div class="api-field">
+        <label>MODEL NAME</label>
+        <input type="text" class="api-input" id="customModel" placeholder="e.g. llama-3.3-70b-versatile, mistral-large-latest..." />
+      </div>
+      <div id="savedCustomList" style="margin-top:8px;display:flex;flex-direction:column;gap:5px;"></div>
+    </div>
+    <div class="modal-note">
+      <span class="shield">&#128737;</span> Keys never leave your browser. Sent directly to each provider's API. Nothing is logged externally.
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn save" onclick="saveApiKey()">Save</button>
+      <button class="modal-btn close" onclick="closeApiModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════
+const state = {
+  provider: 'claude',
+  keys: { claude: '', openai: '', gemini: '' },
+  models: {
+    claude: 'claude-sonnet-4-20250514',
+    openai: 'gpt-4o',
+    gemini: 'gemini-2.0-flash',
+  },
+  customProviders: [],
+  messages: [],
+  takeaways: [],
+  takeawayCount: 3,
+  pinnedTopics: ['Geopolitical', 'Technology', 'Artificial Intelligence', 'Regulatory', 'Company news and financial'],
+  history: [],
+  activeTopic: null,
+  webSearch: true,
+  tone: 'standard',
+  isThinking: false,
+  // Sessions
+  sessions: [],
+  currentSessionId: null,
+  // For contradiction detection
+  prevTakeawayTexts: [],
+};
+
+// Load from localStorage
+function loadState() {
+  try {
+    const saved = localStorage.getItem('msb_state');
+    if (saved) {
+      const s = JSON.parse(saved);
+      state.keys = s.keys || state.keys;
+      state.provider = s.provider || state.provider;
+      state.models = { ...state.models, ...(s.models || {}) };
+      state.customProviders = s.customProviders || [];
+      state.pinnedTopics = s.pinnedTopics || state.pinnedTopics;
+      state.history = s.history || [];
+      state.takeawayCount = s.takeawayCount || 3;
+      state.sessions = s.sessions || [];
+      state.currentSessionId = s.currentSessionId || null;
+    }
+  } catch(e) {}
+}
+
+function saveStateToStorage() {
+  try {
+    localStorage.setItem('msb_state', JSON.stringify({
+      keys: state.keys,
+      provider: state.provider,
+      models: state.models,
+      customProviders: state.customProviders,
+      pinnedTopics: state.pinnedTopics,
+      history: state.history.slice(-20),
+      takeawayCount: state.takeawayCount,
+      sessions: state.sessions.slice(-30),
+      currentSessionId: state.currentSessionId,
+    }));
+  } catch(e) {}
+}
+
+// ═══════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════
+loadState();
+initSession();
+renderPinnedTopics();
+renderHistory();
+renderSessionList();
+updateApiStatus();
+
+// ═══════════════════════════════════════════════════════════
+// UI HELPERS
+// ═══════════════════════════════════════════════════════════
+function setStatus(state_) {
+  const dot = document.getElementById('statusDot');
+  const txt = document.getElementById('statusText');
+  dot.className = 'status-dot ' + state_;
+  txt.textContent = state_ === 'idle' ? 'Ready' : state_ === 'thinking' ? 'Thinking...' : 'Ready';
+}
+
+function showToast(msg, type = 'success') {
+  const c = document.getElementById('toastContainer');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.innerHTML = `<span class="toast-icon">${type==='success'?'✓':'⚠'}</span> ${msg}`;
+  c.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+function handleInputKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+}
+
+function toggleWeb() {
+  state.webSearch = document.getElementById('webCheck').checked;
+  document.getElementById('webToggle').classList.toggle('active', state.webSearch);
+}
+
+document.getElementById('toneSelect').addEventListener('change', e => { state.tone = e.target.value; });
+
+// ═══════════════════════════════════════════════════════════
+// PINNED TOPICS
+// ═══════════════════════════════════════════════════════════
+function renderPinnedTopics() {
+  const list = document.getElementById('pinnedList');
+  list.innerHTML = '';
+  state.pinnedTopics.forEach((t, i) => {
+    const el = document.createElement('div');
+    el.className = 'pinned-item' + (state.activeTopic === t ? ' active' : '');
+    el.innerHTML = `<span class="pin-icon">📌</span><span class="pin-label">${t}</span><button class="pin-remove" onclick="removeTopic(${i},event)">✕</button>`;
+    el.addEventListener('click', () => toggleTopic(t));
+    list.appendChild(el);
+  });
+}
+
+function toggleTopic(t) {
+  state.activeTopic = state.activeTopic === t ? null : t;
+  renderPinnedTopics();
+  updateFilterBar();
+}
+
+function updateFilterBar() {
+  const bar = document.getElementById('topicFilterBar');
+  const txt = document.getElementById('filterTagText');
+  if (state.activeTopic) {
+    bar.classList.add('visible');
+    txt.textContent = state.activeTopic;
+  } else {
+    bar.classList.remove('visible');
+  }
+}
+
+function clearActiveFilter() {
+  state.activeTopic = null;
+  renderPinnedTopics();
+  updateFilterBar();
+}
+
+function toggleAddTopic() {
+  const f = document.getElementById('addTopicForm');
+  f.classList.toggle('visible');
+  if (f.classList.contains('visible')) document.getElementById('newTopicInput').focus();
+}
+
+function addTopic() {
+  const v = document.getElementById('newTopicInput').value.trim();
+  if (v && !state.pinnedTopics.includes(v)) {
+    state.pinnedTopics.push(v);
+    saveStateToStorage();
+    renderPinnedTopics();
+    document.getElementById('newTopicInput').value = '';
+    toggleAddTopic();
+    showToast(`"${v}" added to pinned topics`);
+  }
+}
+
+document.getElementById('newTopicInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') addTopic();
+});
+
+function removeTopic(i, e) {
+  e.stopPropagation();
+  const t = state.pinnedTopics[i];
+  state.pinnedTopics.splice(i, 1);
+  if (state.activeTopic === t) { state.activeTopic = null; updateFilterBar(); }
+  saveStateToStorage();
+  renderPinnedTopics();
+}
+
+// ═══════════════════════════════════════════════════════════
+// HISTORY
+// ═══════════════════════════════════════════════════════════
+function renderHistory() {
+  const list = document.getElementById('historyList');
+  if (state.history.length === 0) {
+    list.innerHTML = '<span class="history-empty">No recent searches...</span>';
+    return;
+  }
+  list.innerHTML = '';
+  [...state.history].reverse().slice(0, 10).forEach(h => {
+    const el = document.createElement('div');
+    el.className = 'history-item';
+    el.textContent = h;
+    el.onclick = () => {
+      document.getElementById('mainInput').value = h;
+      autoResize(document.getElementById('mainInput'));
+    };
+    list.appendChild(el);
+  });
+}
+
+function clearHistory() {
+  state.history = [];
+  saveStateToStorage();
+  renderHistory();
+}
+
+function addHistory(q) {
+  if (!state.history.includes(q)) {
+    state.history.push(q);
+    if (state.history.length > 30) state.history.shift();
+    saveStateToStorage();
+    renderHistory();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// API MODAL
+// ═══════════════════════════════════════════════════════════
+const PROVIDER_CONFIG = {
+  claude: {
+    label: 'ANTHROPIC API KEY', placeholder: 'sk-ant-api...',
+    models: [
+      { id: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4 (recommended)' },
+      { id: 'claude-opus-4-5', label: 'Claude Opus 4.5' },
+      { id: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5 (fast)' },
+      { id: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet' },
+      { id: 'claude-3-5-haiku-20241022', label: 'Claude 3.5 Haiku' },
+    ],
+    hint: 'Sonnet 4 is best for research. Haiku 4.5 is faster & cheaper.',
+  },
+  openai: {
+    label: 'OPENAI API KEY', placeholder: 'sk-...',
+    models: [
+      { id: 'gpt-4o', label: 'GPT-4o (recommended)' },
+      { id: 'gpt-4o-mini', label: 'GPT-4o Mini (fast/cheap)' },
+      { id: 'gpt-4.5-preview', label: 'GPT-4.5 Preview' },
+      { id: 'o3-mini', label: 'o3-mini (reasoning)' },
+      { id: 'o1', label: 'o1 (deep reasoning)' },
+    ],
+    hint: 'GPT-4o offers the best balance of speed and quality.',
+  },
+  gemini: {
+    label: 'GOOGLE GEMINI API KEY', placeholder: 'AIza...',
+    models: [
+      { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash (recommended)' },
+      { id: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash (free tier)' },
+      { id: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro' },
+      { id: 'gemini-2.5-pro-preview-05-06', label: 'Gemini 2.5 Pro Preview' },
+      { id: 'gemini-2.5-flash-preview-05-20', label: 'Gemini 2.5 Flash Preview' },
+    ],
+    hint: '2.0 Flash needs paid tier. Use 1.5 Flash for the free tier.',
+  },
+};
+let _customModelMode = false;
+function openApiModal() {
+  document.getElementById('apiModal').classList.add('visible');
+  const p = state.provider && state.provider.startsWith('custom:') ? 'custom' : (state.provider || 'claude');
+  selectProvider(p);
+  renderSavedCustomProviders();
+}
+function closeApiModal() { document.getElementById('apiModal').classList.remove('visible'); }
+document.getElementById('apiModal').addEventListener('click', e => { if(e.target===e.currentTarget) closeApiModal(); });
+function selectProvider(p) {
+  if (!p.startsWith('custom:')) state.provider = p;
+  ['claude','openai','gemini','custom'].forEach(pp => {
+    const el = document.getElementById('tab-'+pp);
+    if (el) el.classList.toggle('active', pp===p || (pp==='custom' && p.startsWith('custom:')));
+  });
+  const isCustom = p==='custom' || p.startsWith('custom:');
+  document.getElementById('standardFields').style.display = isCustom ? 'none' : 'block';
+  document.getElementById('customFields').style.display = isCustom ? 'block' : 'none';
+  if (!isCustom && PROVIDER_CONFIG[p]) {
+    const cfg = PROVIDER_CONFIG[p];
+    document.getElementById('apiKeyLabel').textContent = cfg.label;
+    document.getElementById('apiKeyInput').placeholder = cfg.placeholder;
+    document.getElementById('apiKeyInput').value = state.keys[p] || '';
+    document.getElementById('modelHint').textContent = cfg.hint;
+    _customModelMode = false;
+    document.getElementById('modelCustomInput').style.display = 'none';
+    document.getElementById('modelSelect').style.display = 'block';
+    document.getElementById('customModelToggle').textContent = 'custom';
+    populateModelSelect(p);
+  }
+  saveStateToStorage();
+}
+function populateModelSelect(provider, liveModels) {
+  const sel = document.getElementById('modelSelect');
+  const cfg = PROVIDER_CONFIG[provider];
+  if (!cfg && !liveModels) return;
+  sel.innerHTML = '';
+  const modelList = liveModels || cfg.models;
+  modelList.forEach(m => {
+    const opt = document.createElement('option');
+    opt.value = m.id; opt.textContent = m.label || m.id;
+    if (m.id === state.models[provider]) opt.selected = true;
+    sel.appendChild(opt);
+  });
+  // If current selection not in list, add it
+  const cur = state.models[provider];
+  if (cur && !modelList.find(m => m.id===cur)) {
+    const opt = document.createElement('option');
+    opt.value = cur; opt.textContent = cur+' (saved)'; opt.selected = true;
+    sel.insertBefore(opt, sel.firstChild);
+  }
+  sel.onchange = () => { state.models[provider] = sel.value; };
+  if (!sel.value && sel.options.length) {
+    state.models[provider] = sel.options[0].value;
+  }
+}
+
+async function fetchLiveModels() {
+  const provider = state.provider;
+  const key = document.getElementById('apiKeyInput').value.trim() || state.keys[provider];
+  if (!key) { showToast('Enter your API key first', 'error'); return; }
+
+  const btn = document.getElementById('fetchModelsBtn');
+  const hint = document.getElementById('modelHint');
+  btn.textContent = '...';
+  btn.disabled = true;
+  hint.textContent = 'Fetching live models...';
+
+  try {
+    let models = [];
+
+    if (provider === 'claude') {
+      // Anthropic doesn't have a public list endpoint — use curated list but mark as fresh
+      models = PROVIDER_CONFIG.claude.models;
+      hint.textContent = 'Anthropic does not expose a public models list — showing curated list.';
+    }
+    else if (provider === 'openai') {
+      const res = await fetch('https://api.openai.com/v1/models', {
+        headers: { 'Authorization': 'Bearer ' + key }
+      });
+      if (!res.ok) throw new Error('OpenAI models API error ' + res.status);
+      const data = await res.json();
+      // Filter to chat-capable models only, sort by id
+      const chatModels = data.data
+        .filter(m => m.id.startsWith('gpt-') || m.id.startsWith('o1') || m.id.startsWith('o3') || m.id.startsWith('o4'))
+        .sort((a,b) => b.id.localeCompare(a.id))
+        .map(m => ({ id: m.id, label: m.id }));
+      models = chatModels.length ? chatModels : PROVIDER_CONFIG.openai.models;
+      hint.textContent = 'Live: ' + models.length + ' chat models found from OpenAI API.';
+    }
+    else if (provider === 'gemini') {
+      const res = await fetch(
+        'https://generativelanguage.googleapis.com/v1beta/models?key=' + key
+      );
+      if (!res.ok) throw new Error('Gemini models API error ' + res.status);
+      const data = await res.json();
+      // Filter to generateContent-capable models, prefer flash/pro
+      const geminiModels = (data.models || [])
+        .filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes('generateContent'))
+        .sort((a,b) => b.name.localeCompare(a.name))
+        .map(m => {
+          const id = m.name.replace('models/', '');
+          return { id, label: m.displayName || id };
+        });
+      models = geminiModels.length ? geminiModels : PROVIDER_CONFIG.gemini.models;
+      // Set the newest flash as default if current model not in list
+      const flashModel = geminiModels.find(m => m.id.includes('flash') && !m.id.includes('lite') && !m.id.includes('8b'));
+      if (flashModel && !state.models.gemini) state.models.gemini = flashModel.id;
+      hint.textContent = 'Live: ' + models.length + ' models found. Newest flash auto-selected.';
+    }
+
+    populateModelSelect(provider, models);
+    btn.textContent = '✓ live';
+    btn.style.color = 'var(--success)';
+    setTimeout(() => { btn.textContent = '蘵 live'; btn.style.color = 'var(--accent-3)'; btn.disabled = false; }, 2000);
+  } catch(err) {
+    hint.textContent = 'Error: ' + err.message + ' — showing cached list.';
+    populateModelSelect(provider);
+    btn.textContent = '蘵 live';
+    btn.style.color = 'var(--accent-3)';
+    btn.disabled = false;
+    showToast('Could not fetch live models: ' + err.message, 'error');
+  }
+}
+function toggleCustomModel() {
+  _customModelMode = !_customModelMode;
+  const sel = document.getElementById('modelSelect');
+  const inp = document.getElementById('modelCustomInput');
+  const btn = document.getElementById('customModelToggle');
+  if (_customModelMode) {
+    sel.style.display='none'; inp.style.display='block';
+    inp.value = state.models[state.provider]||''; inp.focus();
+    btn.textContent='list';
+    inp.oninput = () => { state.models[state.provider] = inp.value.trim(); };
+  } else {
+    sel.style.display='block'; inp.style.display='none';
+    btn.textContent='custom'; populateModelSelect(state.provider);
+  }
+}
+function toggleApiVisibility(id) {
+  const inp = document.getElementById(id);
+  inp.type = inp.type==='password' ? 'text' : 'password';
+}
+function saveApiKey() {
+  if (document.getElementById('customFields').style.display !== 'none') {
+    const name = document.getElementById('customName').value.trim();
+    const endpoint = document.getElementById('customEndpoint').value.trim();
+    const key = document.getElementById('customKey').value.trim();
+    const model = document.getElementById('customModel').value.trim();
+    if (!name||!endpoint||!model) { showToast('Fill in name, endpoint and model','error'); return; }
+    const entry = {name,endpoint,key,model};
+    const idx = state.customProviders.findIndex(p=>p.name===name);
+    if (idx>=0) state.customProviders[idx]=entry; else state.customProviders.push(entry);
+    state.provider = 'custom:'+name;
+    saveStateToStorage(); updateApiStatus(); renderSavedCustomProviders();
+    showToast(name+' provider saved');
+    ['customName','customEndpoint','customKey','customModel'].forEach(id=>document.getElementById(id).value='');
+  } else {
+    const v = document.getElementById('apiKeyInput').value.trim();
+    state.keys[state.provider] = v;
+    state.models[state.provider] = _customModelMode
+      ? (document.getElementById('modelCustomInput').value.trim() || state.models[state.provider])
+      : document.getElementById('modelSelect').value;
+    saveStateToStorage(); updateApiStatus();
+    if (v) showToast(state.provider+' ('+state.models[state.provider]+') saved');
+    closeApiModal();
+  }
+}
+function renderSavedCustomProviders() {
+  const list = document.getElementById('savedCustomList');
+  if (!list) return;
+  list.innerHTML = '';
+  if (!state.customProviders.length) return;
+  const lbl = document.createElement('div');
+  lbl.style.cssText = 'font-family:var(--font-mono);font-size:10px;color:var(--text-muted);letter-spacing:1px;margin-bottom:4px;text-transform:uppercase;';
+  lbl.textContent = 'Saved Custom Providers';
+  list.appendChild(lbl);
+  state.customProviders.forEach((p,i) => {
+    const isActive = state.provider==='custom:'+p.name;
+    const row = document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;';
+    const useBtn = document.createElement('button');
+    useBtn.textContent = isActive ? 'active' : 'use';
+    useBtn.style.cssText = 'font-size:10px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);cursor:pointer;background:'+(isActive?'var(--accent)':'var(--bg-hover)')+';color:'+(isActive?'#fff':'var(--text-secondary)')+';';
+    useBtn.onclick = () => activateCustomProvider(p.name);
+    const delBtn = document.createElement('button');
+    delBtn.textContent = '×';
+    delBtn.style.cssText = 'color:var(--text-muted);background:none;border:none;cursor:pointer;padding:2px 6px;font-size:15px;';
+    delBtn.onclick = () => removeCustomProvider(i);
+    const label = document.createElement('span');
+    label.style.cssText = 'flex:1;font-size:12px;color:'+(isActive?'var(--accent)':'var(--text-primary)')+';';
+    label.textContent = p.name + ' ';
+    const sub = document.createElement('span');
+    sub.style.cssText = 'color:var(--text-muted);font-family:var(--font-mono);font-size:10px;';
+    sub.textContent = p.model;
+    label.appendChild(sub);
+    row.appendChild(label); row.appendChild(useBtn); row.appendChild(delBtn);
+    list.appendChild(row);
+  });
+}
+function activateCustomProvider(name) {
+  state.provider = 'custom:'+name;
+  saveStateToStorage(); updateApiStatus(); renderSavedCustomProviders();
+  closeApiModal(); showToast('Switched to '+name);
+}
+function removeCustomProvider(i) {
+  const name = state.customProviders[i].name;
+  state.customProviders.splice(i,1);
+  if (state.provider==='custom:'+name) state.provider='claude';
+  saveStateToStorage(); updateApiStatus(); renderSavedCustomProviders();
+}
+function updateApiStatus() {
+  const el = document.getElementById('apiKeyStatus');
+  if (state.provider && state.provider.startsWith('custom:')) {
+    const name = state.provider.replace('custom:','');
+    const cp = state.customProviders.find(p=>p.name===name);
+    if (cp) { el.innerHTML='<span class="active">?? '+name+' ('+cp.model+')</span>'; return; }
+  }
+  const activeKey = state.keys[state.provider];
+  if (activeKey) {
+    el.innerHTML='<span class="active">?? '+state.provider+' · '+(state.models[state.provider]||'')+'</span>';
+  } else {
+    const any = Object.entries(state.keys).find(([k,v])=>v);
+    if (any) {
+      el.innerHTML='<span class="active">?? '+any[0]+' · '+(state.models[any[0]]||'')+'</span>';
+      state.provider=any[0];
+    } else if (state.customProviders.length) {
+      const cp=state.customProviders[0]; state.provider='custom:'+cp.name;
+      el.innerHTML='<span class="active">?? '+cp.name+' ('+cp.model+')</span>';
+    } else {
+      el.innerHTML='<span class="missing">No API key — click to configure</span>';
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// CHAT
+// ═══════════════════════════════════════════════════════════
+function appendUserMsg(text) {
+  hideChatEmpty();
+  const area = document.getElementById('chatArea');
+  const div = document.createElement('div');
+  div.className = 'msg msg-user';
+  div.innerHTML = `
+    <div class="bubble">${escHtml(text)}</div>
+    <div class="msg-meta">${new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div>
+  `;
+  area.appendChild(div);
+  area.scrollTop = area.scrollHeight;
+}
+
+function appendAiMsg(html, sources = [], citations = []) {
+  const area = document.getElementById('chatArea');
+  const div = document.createElement('div');
+  div.className = 'msg msg-ai';
+  const msgId = 'msg-' + Date.now();
+  div.id = msgId;
+
+  let sourcesHtml = '';
+  if (citations.length) {
+    sourcesHtml = `<div class="sources-bar">
+      <div class="sources-bar-title">Sources</div>
+      ${citations.map((c,i) => {
+        let domain = '';
+        try { domain = new URL(c.url).hostname.replace('www.',''); } catch(e) {}
+        return `<div class="source-item">
+          <span class="source-num">${i+1}</span>
+          <span><a class="source-link" href="${c.url}" target="_blank" rel="noopener">${c.title || domain}</a>
+          <span class="source-domain">${domain}</span></span>
+        </div>`;
+      }).join('')}
+    </div>`;
+  } else if (sources.length) {
+    sourcesHtml = `<div class="source-chips">${sources.map(s => `<span class="source-chip ${s.type}">${s.label}</span>`).join('')}</div>`;
+  }
+
+  const time = new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+  div.innerHTML = `
+    <div class="bubble">${html}${sourcesHtml}</div>
+    <div class="msg-meta">
+      🧠 MySecondBrain · ${time}
+      <button class="copy-response-btn" onclick="copyResponse('${msgId}')" title="Copy response">copy</button>
+      <button class="msg-collapse-btn" onclick="toggleCollapse('${msgId}')" title="Collapse">▲</button>
+    </div>
+  `;
+  area.appendChild(div);
+  area.scrollTop = area.scrollHeight;
+  return div;
+}
+
+function copyResponse(msgId) {
+  const el = document.getElementById(msgId);
+  if (!el) return;
+  const text = el.querySelector('.bubble').innerText;
+  navigator.clipboard.writeText(text).then(() => showToast('Response copied'));
+}
+
+function toggleCollapse(msgId) {
+  const el = document.getElementById(msgId);
+  if (!el) return;
+  el.classList.toggle('collapsed');
+  const btn = el.querySelector('.msg-collapse-btn');
+  btn.textContent = el.classList.contains('collapsed') ? '▼' : '▲';
+}
+
+// Streaming append — creates a live-updating bubble
+function createStreamingBubble() {
+  const area = document.getElementById('chatArea');
+  hideChatEmpty();
+  const div = document.createElement('div');
+  div.className = 'msg msg-ai';
+  div.id = 'streamingMsg';
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble';
+  bubble.id = 'streamingBubble';
+  bubble.innerHTML = '<span class="streaming-cursor"></span>';
+  div.appendChild(bubble);
+  area.appendChild(div);
+  area.scrollTop = area.scrollHeight;
+  return bubble;
+}
+
+function updateStreamingBubble(text) {
+  const bubble = document.getElementById('streamingBubble');
+  if (!bubble) return;
+  const parsed = parseResponse(text);
+  bubble.innerHTML = parsed.html + '<span class="streaming-cursor"></span>';
+  document.getElementById('chatArea').scrollTop = document.getElementById('chatArea').scrollHeight;
+}
+
+function finalizeStreamingBubble(html, sources, citations) {
+  const streaming = document.getElementById('streamingMsg');
+  if (streaming) streaming.remove();
+  return appendAiMsg(html, sources, citations);
+}
+
+function showThinking(label = 'Thinking') {
+  const area = document.getElementById('chatArea');
+  const div = document.createElement('div');
+  div.className = 'thinking-indicator';
+  div.id = 'thinkingIndicator';
+  div.innerHTML = `
+    <div class="thinking-dots">
+      <div class="thinking-dot"></div><div class="thinking-dot"></div><div class="thinking-dot"></div>
+    </div>
+    <span class="thinking-label">${label}...</span>
+  `;
+  area.appendChild(div);
+  area.scrollTop = area.scrollHeight;
+}
+
+function hideThinking() {
+  const el = document.getElementById('thinkingIndicator');
+  if (el) el.remove();
+}
+
+function hideChatEmpty() {
+  const el = document.getElementById('chatEmpty');
+  if (el) el.style.display = 'none';
+}
+
+function escHtml(t) {
+  return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+}
+
+// ═══════════════════════════════════════════════════════════
+// SEND MESSAGE
+// ═══════════════════════════════════════════════════════════
+async function sendMessage() {
+  const input = document.getElementById('mainInput');
+  const q = input.value.trim();
+  if (!q || state.isThinking) return;
+
+  const key = getActiveKey();
+  if (!key) { openApiModal(); showToast('Please add an API key to continue', 'error'); return; }
+
+  input.value = '';
+  autoResize(input);
+  appendUserMsg(q);
+  addHistory(q);
+
+  state.messages.push({ role: 'user', content: buildUserPrompt(q) });
+
+  setLoading(true);
+  showThinking();
+
+  try {
+    const reply = await callAI(state.messages);
+    hideThinking();
+    const replyText = typeof reply === 'object' ? reply.text : reply;
+    const parsed = parseResponse(reply);
+    finalizeStreamingBubble(parsed.html, parsed.sources, parsed.citations);
+    state.messages.push({ role: 'assistant', content: replyText });
+    saveCurrentSession();
+    enableExportButtons();
+    await updateTakeaways(q, replyText);
+    generateFollowUps(replyText);
+  } catch(err) {
+    hideThinking();
+    const streaming = document.getElementById('streamingMsg');
+    if (streaming) streaming.remove();
+    appendAiMsg(`<p style="color:var(--accent-2)">⚠ Error: ${escHtml(err.message)}</p>`);
+  } finally {
+    setLoading(false);
+  }
+}
+
+function buildUserPrompt(q) {
+  let prompt = q;
+  if (state.activeTopic) {
+    prompt = `[Context: Focus your response specifically on the "${state.activeTopic}" angle]\n\n${q}`;
+  }
+  const toneInstructions = {
+    standard: '',
+    academic: ' Please use academic tone with citations where applicable.',
+    executive: ' Please be concise and executive-brief — key facts and implications only.',
+    casual: ' Please use a friendly, conversational tone.',
+    critical: ' Please take a critical analytical perspective, highlighting risks, counterarguments, and uncertainties.',
+  };
+  prompt += toneInstructions[state.tone] || '';
+  if (state.webSearch) prompt += '\n\n[Note: You have web search enabled, so please search for current information if relevant]';
+  return prompt;
+}
+
+function getActiveKey() {
+  if (state.provider && state.provider.startsWith('custom:')) {
+    const name = state.provider.replace('custom:', '');
+    return state.customProviders.find(p => p.name === name)?.key || '';
+  }
+  return state.keys[state.provider] || Object.values(state.keys).find(v => v) || '';
+}
+
+function getActiveProvider() {
+  if (state.provider && state.provider.startsWith('custom:')) return state.provider;
+  if (state.keys[state.provider]) return state.provider;
+  const any = Object.entries(state.keys).find(([k,v]) => v);
+  if (any) return any[0];
+  if (state.customProviders.length) return 'custom:' + state.customProviders[0].name;
+  return 'claude';
+}
+
+function setLoading(v) {
+  state.isThinking = v;
+  document.getElementById('sendBtn').disabled = v;
+  document.getElementById('deepBtn').disabled = v;
+  setStatus(v ? 'thinking' : 'idle');
+}
+
+// ═══════════════════════════════════════════════════════════
+// AI API CALLS
+// ═══════════════════════════════════════════════════════════
+async function callAI(messages) {
+  const provider = getActiveProvider();
+  if (provider.startsWith('custom:')) {
+    const name = provider.replace('custom:', '');
+    const cp = state.customProviders.find(p => p.name === name);
+    if (!cp) throw new Error('Custom provider not found: ' + name);
+    return callCustomOpenAI(messages, cp);
+  }
+  const key = state.keys[provider] || getActiveKey();
+  if (provider === 'claude') return callClaude(messages, key);
+  if (provider === 'openai') return callOpenAI(messages, key);
+  if (provider === 'gemini') return callGemini(messages, key);
+}
+
+async function callCustomOpenAI(messages, cp) {
+  const res = await fetch(cp.endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + cp.key },
+    body: JSON.stringify({ model: cp.model, messages: [{ role: 'system', content: buildSystemPrompt() }, ...messages], max_tokens: 2048, stream: true }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || cp.name + ' error ' + res.status);
+  }
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let fullText = '';
+  createStreamingBubble();
+  hideThinking();
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    const lines = decoder.decode(value).split('\n');
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue;
+      const data = line.slice(6);
+      if (data === '[DONE]') continue;
+      try {
+        const evt = JSON.parse(data);
+        const delta = evt.choices?.[0]?.delta?.content;
+        if (delta) { fullText += delta; updateStreamingBubble(fullText); }
+      } catch(e) {}
+    }
+  }
+  return { text: fullText, citations: [] };
+}
+
+async function callClaude(messages, key) {
+  const systemPrompt = buildSystemPrompt();
+  const tools = state.webSearch ? [{ type: "web_search_20250305", name: "web_search" }] : [];
+  const body = {
+    model: state.models.claude || 'claude-sonnet-4-20250514',
+    max_tokens: 2048, system: systemPrompt, messages, stream: true,
+  };
+  if (tools.length) body.tools = tools;
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json', 'x-api-key': key,
+      'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || `Claude API error ${res.status}`);
+  }
+
+  // Stream response
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let fullText = '';
+  let citations = [];
+  createStreamingBubble();
+  hideThinking();
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    const chunk = decoder.decode(value);
+    const lines = chunk.split('\n');
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue;
+      const data = line.slice(6);
+      if (data === '[DONE]') continue;
+      try {
+        const evt = JSON.parse(data);
+        if (evt.type === 'content_block_delta' && evt.delta?.type === 'text_delta') {
+          fullText += evt.delta.text;
+          updateStreamingBubble(fullText);
+        }
+        // Extract citations from web search results
+        if (evt.type === 'content_block_start' && evt.content_block?.type === 'tool_result') {
+          const results = evt.content_block?.content || [];
+          results.forEach(r => {
+            if (r.type === 'web_search_result') {
+              citations.push({ url: r.url, title: r.title || r.url });
+            }
+          });
+        }
+      } catch(e) {}
+    }
+  }
+  return { text: fullText, citations };
+}
+
+async function callOpenAI(messages, key) {
+  const sysMsg = { role: 'system', content: buildSystemPrompt() };
+  const body = {
+    model: state.models.openai || 'gpt-4o',
+    messages: [sysMsg, ...messages],
+    max_tokens: 2048, stream: true,
+  };
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || `OpenAI API error ${res.status}`);
+  }
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let fullText = '';
+  createStreamingBubble();
+  hideThinking();
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    const lines = decoder.decode(value).split('\n');
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue;
+      const data = line.slice(6);
+      if (data === '[DONE]') continue;
+      try {
+        const evt = JSON.parse(data);
+        const delta = evt.choices?.[0]?.delta?.content;
+        if (delta) { fullText += delta; updateStreamingBubble(fullText); }
+      } catch(e) {}
+    }
+  }
+  // Extract any URLs mentioned in text as citations
+  const urlRegex = /https?:\/\/[^\s)>"]+/g;
+  const urls = [...new Set(fullText.match(urlRegex) || [])];
+  const citations = urls.slice(0,6).map(url => {
+    let domain = '';
+    try { domain = new URL(url).hostname.replace('www.',''); } catch(e) {}
+    return { url, title: domain };
+  });
+  return { text: fullText, citations };
+}
+
+async function callGemini(messages, key) {
+  const contents = messages.map(m => ({
+    role: m.role === 'assistant' ? 'model' : 'user',
+    parts: [{ text: typeof m.content === 'string' ? m.content : m.content }]
+  }));
+
+  const body = {
+    contents,
+    systemInstruction: { parts: [{ text: buildSystemPrompt() }] },
+    generationConfig: { maxOutputTokens: 2048 },
+  };
+
+  if (state.webSearch) {
+    body.tools = [{ googleSearch: {} }];
+  }
+
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${state.models.gemini || 'gemini-2.0-flash'}:generateContent?key=${key}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }
+  );
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || `Gemini API error ${res.status}`);
+  }
+
+  const data = await res.json();
+  const text = data.candidates[0].content.parts.map(p => p.text || '').join('\n');
+
+  // Extract grounding citations from Gemini's groundingMetadata
+  const citations = [];
+  const chunks = data.candidates[0]?.groundingMetadata?.groundingChunks || [];
+  chunks.forEach(chunk => {
+    if (chunk.web?.uri) {
+      let domain = '';
+      try { domain = new URL(chunk.web.uri).hostname.replace('www.',''); } catch(e) {}
+      citations.push({ url: chunk.web.uri, title: chunk.web.title || domain });
+    }
+  });
+  return { text, citations };
+}
+
+function buildSystemPrompt() {
+  const topicInstruction = state.activeTopic
+    ? `The user has pinned the topic "${state.activeTopic}". Unless they ask otherwise, frame your responses with this topic in mind.`
+    : '';
+
+  return `You are MySecondBrain, an advanced personal research assistant. You help users research and synthesize complex topics with clarity and depth.
+
+${topicInstruction}
+
+Guidelines:
+- Provide well-structured, insightful responses
+- Use **bold** for key terms and findings
+- When appropriate, use short bullet points for lists
+- Cite sources or note when information may be uncertain
+- Be direct and substantive — no filler
+- If web search is available, use it for current events and data
+- Format responses to be scannable: short paragraphs, clear structure`;
+}
+
+// ═══════════════════════════════════════════════════════════
+// RESPONSE PARSING
+// ═══════════════════════════════════════════════════════════
+function parseResponse(rawReply, extraCitations = []) {
+  // rawReply can be string or {text, citations} object from streaming calls
+  const text = typeof rawReply === 'object' ? rawReply.text : rawReply;
+  const citations = typeof rawReply === 'object' ? (rawReply.citations || []) : extraCitations;
+
+  // Deduplicate citations by URL
+  const seen = new Set();
+  const uniqueCitations = citations.filter(c => {
+    if (seen.has(c.url)) return false;
+    seen.add(c.url); return true;
+  }).slice(0, 8);
+
+  // Replace markdown URLs [text](url) with citation superscripts
+  let html = text;
+  const mdLinks = [...html.matchAll(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g)];
+  mdLinks.forEach(match => {
+    const [full, linkText, url] = match;
+    let idx = uniqueCitations.findIndex(c => c.url === url);
+    if (idx === -1) {
+      uniqueCitations.push({ url, title: linkText });
+      idx = uniqueCitations.length - 1;
+    }
+    html = html.replace(full, `${linkText}<a class="citation-sup" href="${url}" target="_blank" title="${url}">${idx+1}</a>`);
+  });
+
+  // Convert markdown to HTML
+  html = html
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    .replace(/^### (.*$)/gm, '<h3>$1</h3>')
+    .replace(/^## (.*$)/gm, '<h3>$1</h3>')
+    .replace(/^# (.*$)/gm, '<h3>$1</h3>')
+    .replace(/^- (.*$)/gm, '<li>$1</li>')
+    .replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>')
+    .replace(/\n\n/g, '</p><p>')
+    .replace(/\n/g, '<br>');
+
+  if (!html.startsWith('<')) html = '<p>' + html + '</p>';
+
+  const sources = state.webSearch ? [{ label: '🌐 Web', type: 'web' }] : [];
+  return { html, sources, citations: uniqueCitations };
+}
+
+// ═══════════════════════════════════════════════════════════
+// TAKEAWAYS
+// ═══════════════════════════════════════════════════════════
+async function updateTakeaways(query, response, isDeep = false) {
+  const key = getActiveKey();
+  if (!key) return;
+
+  const count = state.takeawayCount;
+  const prevContext = state.prevTakeawayTexts.length
+    ? `\n\nPrevious takeaways to check for contradictions:\n${state.prevTakeawayTexts.map((t,i) => `${i+1}. ${t}`).join('\n')}`
+    : '';
+
+  const prompt = `Based on this research exchange, extract exactly ${count} key takeaways.
+
+User asked: "${query}"
+Research response: ${response.substring(0, 2500)}${prevContext}
+
+Return ONLY valid JSON in this exact format, no markdown, no explanation:
+{
+  "takeaways": [
+    {
+      "point": "concise takeaway here",
+      "why": "one sentence on why this matters",
+      "confidence": "high|medium|low",
+      "contradicts": "exact text of a previous takeaway this contradicts, or null"
+    }
+  ]
+}
+
+Confidence guide: high=well-supported by multiple sources, medium=single source or some uncertainty, low=speculative or conflicting info.`;
+
+  try {
+    const msgs = [{ role: 'user', content: prompt }];
+    let raw;
+    const provider = getActiveProvider();
+    const apiKey = state.keys[provider] || getActiveKey();
+
+    if (provider === 'claude') {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+        body: JSON.stringify({ model: state.models.claude || 'claude-haiku-4-5-20251001', max_tokens: 600, messages: msgs }),
+      });
+      const d = await res.json();
+      raw = d.content?.[0]?.text || '';
+    } else if (provider === 'openai') {
+      const res = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+        body: JSON.stringify({ model: state.models.openai || 'gpt-4o-mini', messages: [{ role: 'user', content: prompt }], max_tokens: 600 }),
+      });
+      const d = await res.json();
+      raw = d.choices?.[0]?.message?.content || '';
+    } else {
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${state.models.gemini || 'gemini-2.0-flash'}:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }], generationConfig: { maxOutputTokens: 600 } }),
+      });
+      const d = await res.json();
+      raw = d.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('') || '';
+    }
+
+    const clean = raw.replace(/```json|```/g, '').trim();
+    const parsed = JSON.parse(clean);
+    if (parsed.takeaways) {
+      const prev = state.takeaways.map(t => t.point);
+      state.takeaways = parsed.takeaways;
+      renderTakeaways(prev, isDeep);
+    }
+  } catch(e) {
+    // Takeaway extraction failed silently
+  }
+}
+
+function setCount(n) {
+  state.takeawayCount = n;
+  saveStateToStorage();
+  document.getElementById('count3btn').classList.toggle('active', n === 3);
+  document.getElementById('count5btn').classList.toggle('active', n === 5);
+  // Re-extract takeaways if we have conversation history
+  if (state.messages.length >= 2) {
+    const lastUser = [...state.messages].reverse().find(m => m.role === 'user');
+    const lastAI = [...state.messages].reverse().find(m => m.role === 'assistant');
+    if (lastUser && lastAI) {
+      updateTakeaways(
+        typeof lastUser.content === 'string' ? lastUser.content : JSON.stringify(lastUser.content),
+        lastAI.content
+      );
+    }
+  } else if (state.takeaways.length) {
+    // Just re-render what we have
+    renderTakeaways([], false);
+  }
+}
+
+function renderTakeaways(prevPoints = [], isDeep = false) {
+  const list = document.getElementById('takeawaysList');
+  list.innerHTML = '';
+
+  if (!state.takeaways.length) {
+    list.innerHTML = `<div class="takeaway-empty"><div class="takeaway-empty-icon">✦</div><p>Run a search to see key takeaways here.</p></div>`;
+    return;
+  }
+
+  // Store current points for next contradiction check
+  state.prevTakeawayTexts = state.takeaways.slice(0, state.takeawayCount).map(t => t.point);
+
+  state.takeaways.slice(0, state.takeawayCount).forEach((t, i) => {
+    const isNew = !prevPoints.includes(t.point);
+    const conf = t.confidence || 'medium';
+    const confLabels = { high: 'High', medium: 'Medium', low: 'Low' };
+    const confBadge = `<span class="confidence-badge ${conf}"><span class="confidence-dot"></span>${confLabels[conf]}</span>`;
+    const contradictionHtml = t.contradicts
+      ? `<div class="takeaway-contradiction-note">⚠ Contradicts earlier finding: "${escHtml(t.contradicts.substring(0,80))}..."</div>`
+      : '';
+    const card = document.createElement('div');
+    card.className = 'takeaway-card' + (isNew && prevPoints.length ? ' updated' : '') + (t.contradicts ? ' contradicted' : '');
+    card.innerHTML = `
+      <div class="takeaway-num">TAKEAWAY ${String(i+1).padStart(2,'0')}${isDeep ? ' · DEEP' : ''}${confBadge}</div>
+      <div class="takeaway-text" contenteditable="true" spellcheck="false">${escHtml(t.point)}</div>
+      <div class="takeaway-why"><strong>Why it matters:</strong> ${escHtml(t.why)}</div>
+      ${contradictionHtml}
+      <div class="takeaway-actions">
+        <button class="takeaway-action-btn pin-to-topic" onclick="pinTakeawayAsTopic(${i})" title="Pin as topic">📌 Pin topic</button>
+        <button class="takeaway-action-btn" onclick="copyTakeaway(${i})" title="Copy">Copy</button>
+      </div>
+    `;
+    list.appendChild(card);
+  });
+
+  // Enable export
+  document.getElementById('exportMdBtn').disabled = false;
+  document.getElementById('exportPdfBtn').disabled = false;
+}
+
+function pinTakeawayAsTopic(i) {
+  const t = state.takeaways[i];
+  const topic = t.point.substring(0, 50).replace(/[^a-zA-Z0-9 ]/g, '').trim();
+  if (topic && !state.pinnedTopics.includes(topic)) {
+    state.pinnedTopics.push(topic);
+    saveStateToStorage();
+    renderPinnedTopics();
+    showToast(`"${topic}" pinned as topic`);
+  }
+}
+
+function copyTakeaway(i) {
+  const t = state.takeaways[i];
+  navigator.clipboard.writeText(`${t.point}\n\nWhy it matters: ${t.why}`).then(() => showToast('Copied to clipboard'));
+}
+
+// ═══════════════════════════════════════════════════════════
+// DEEP RESEARCH
+// ═══════════════════════════════════════════════════════════
+async function doDeepResearch() {
+  const input = document.getElementById('mainInput');
+  const q = input.value.trim() || (state.messages.length ? state.messages[state.messages.length-1].content : '');
+  if (!q) { showToast('Enter a topic or question first', 'error'); return; }
+  if (state.isThinking) return;
+
+  const key = getActiveKey();
+  if (!key) { openApiModal(); return; }
+
+  input.value = '';
+  autoResize(input);
+
+  // Show deep research banner
+  hideChatEmpty();
+  const area = document.getElementById('chatArea');
+  const banner = document.createElement('div');
+  banner.className = 'deep-research-banner';
+  banner.innerHTML = `<span class="deep-icon">🔬</span> <span>Conducting deep research on: <strong>${escHtml(typeof q === 'string' ? q : JSON.stringify(q))}</strong></span>`;
+  area.appendChild(banner);
+  area.scrollTop = area.scrollHeight;
+
+  setLoading(true);
+  showProgress();
+
+  const steps = [
+    'Formulating research questions',
+    'Searching primary sources',
+    'Analyzing data',
+    'Cross-referencing sources',
+    'Synthesizing findings',
+    'Generating insights',
+  ];
+
+  let stepI = 0;
+  const stepInterval = setInterval(() => {
+    if (stepI < steps.length) {
+      updateProgress(steps[stepI], Math.round((stepI / steps.length) * 90));
+      stepI++;
+    }
+  }, 1200);
+
+  const deepPrompt = `Conduct a comprehensive, multi-angle research report on: "${typeof q === 'string' ? q : JSON.stringify(q)}"
+
+${state.activeTopic ? `Focus specifically on the "${state.activeTopic}" dimension.` : ''}
+
+Structure your response as a thorough research report covering:
+1. **Overview** — what this topic is and why it matters now
+2. **Key Findings** — 3-5 major substantive findings with supporting evidence
+3. **Different Perspectives** — at least 2-3 viewpoints or stakeholder angles
+4. **Data & Evidence** — specific statistics, examples, or case studies
+5. **Implications** — what this means going forward
+6. **Open Questions** — what remains uncertain or contested
+
+Be thorough, specific, and cite evidence. Use current information where available.`;
+
+  state.messages.push({ role: 'user', content: deepPrompt });
+
+  try {
+    const reply = await callAI(state.messages);
+    clearInterval(stepInterval);
+    updateProgress('Complete', 100);
+
+    setTimeout(() => {
+      hideProgress();
+      hideThinking();
+      const replyText = typeof reply === 'object' ? reply.text : reply;
+      const parsed = parseResponse(reply);
+      finalizeStreamingBubble(parsed.html, parsed.sources, parsed.citations);
+      state.messages.push({ role: 'assistant', content: replyText });
+      saveCurrentSession();
+      enableExportButtons();
+      updateTakeaways(q, replyText, true);
+      generateFollowUps(replyText);
+    }, 400);
+
+  } catch(err) {
+    clearInterval(stepInterval);
+    hideProgress();
+    hideThinking();
+    appendAiMsg(`<p style="color:var(--accent-2)">⚠ Deep research error: ${escHtml(err.message)}</p>`);
+  } finally {
+    setLoading(false);
+  }
+}
+
+function showProgress() {
+  document.getElementById('progressWrap').classList.add('visible');
+  updateProgress('Initializing', 0);
+}
+function hideProgress() {
+  document.getElementById('progressWrap').classList.remove('visible');
+}
+function updateProgress(label, pct) {
+  document.getElementById('progressLabel').textContent = label + '...';
+  document.getElementById('progressPct').textContent = pct + '%';
+  document.getElementById('progressFill').style.width = pct + '%';
+  showThinking(label);
+  const existing = document.getElementById('thinkingIndicator');
+  if (existing) existing.querySelector('.thinking-label').textContent = label + '...';
+}
+
+// ═══════════════════════════════════════════════════════════
+// EXPORT
+// ═══════════════════════════════════════════════════════════
+function enableExportButtons() {
+  document.getElementById('saveLocalBtn').disabled = false;
+  document.getElementById('notebookBtn').disabled = false;
+  document.getElementById('obsidianBtn').disabled = false;
+}
+
+function buildMarkdownSummary() {
+  const date = new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+  const topic = state.activeTopic ? `\n**Topic Scope:** ${state.activeTopic}` : '';
+  const takeaways = state.takeaways.slice(0, state.takeawayCount)
+    .map((t, i) => `### Takeaway ${i+1}\n**${t.point}**\n\n*Why it matters:* ${t.why}`)
+    .join('\n\n');
+
+  const messages = state.messages
+    .filter(m => m.role === 'user')
+    .map(m => `- ${typeof m.content === 'string' ? m.content.substring(0, 120) : ''}`)
+    .slice(-5)
+    .join('\n');
+
+  return `# Research Summary — MySecondBrain
+**Date:** ${date}${topic}
+
+---
+
+## Key Takeaways
+
+${takeaways}
+
+---
+
+## Research Queries
+
+${messages}
+
+---
+*Generated by MySecondBrain*
+`;
+}
+
+function saveLocal() {
+  const md = buildMarkdownSummary();
+  const blob = new Blob([md], { type: 'text/markdown' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `research-${Date.now()}.md`;
+  a.click();
+  showToast('Research summary downloaded');
+}
+
+function copyForNotebook() {
+  const md = buildMarkdownSummary();
+  navigator.clipboard.writeText(md).then(() => {
+    showToast('Copied in NotebookLM format — paste into a new notebook source');
+  });
+}
+
+function exportObsidian() {
+  const date = new Date().toISOString().split('T')[0];
+  const topic = state.activeTopic || 'Research';
+  const tags = state.activeTopic ? `\ntags: [${state.activeTopic.toLowerCase().replace(/\s/g,'-')}]` : '';
+  const md = `---
+date: ${date}${tags}
+source: MySecondBrain
+---
+
+${buildMarkdownSummary()}`;
+
+  const blob = new Blob([md], { type: 'text/markdown' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `${date}-${topic.replace(/\s/g,'-')}.md`;
+  a.click();
+  showToast('Obsidian note downloaded — place in your vault');
+}
+
+function copyMarkdown() {
+  navigator.clipboard.writeText(buildMarkdownSummary()).then(() => showToast('Markdown copied'));
+}
+
+function exportPDF() {
+  const md = buildMarkdownSummary();
+  const win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html><html><head>
+<style>
+  body { font-family: Georgia, serif; max-width: 700px; margin: 40px auto; padding: 0 20px; color: #222; line-height: 1.7; }
+  h1 { font-size: 24px; border-bottom: 2px solid #333; padding-bottom: 8px; }
+  h2 { font-size: 18px; margin-top: 28px; color: #444; }
+  h3 { font-size: 15px; margin-top: 16px; }
+  strong { color: #111; }
+  em { color: #555; }
+  hr { border: 1px solid #ddd; margin: 20px 0; }
+  .meta { color: #888; font-size: 13px; }
+</style>
+</head><body>
+<pre style="white-space:pre-wrap;font-family:Georgia,serif">${md.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</pre>
+<script>window.onload=()=>window.print()<\/script>
+</body></html>`);
+}
+
+// ═══════════════════════════════════════════════════════════
+// FOLLOW-UPS
+// ═══════════════════════════════════════════════════════════
+async function generateFollowUps(responseText) {
+  const key = getActiveKey();
+  if (!key) return;
+  const prompt = `Based on this research response, suggest exactly 3 short follow-up questions the user might want to ask next. Each should be under 10 words, specific, and genuinely useful.
+
+Response: ${responseText.substring(0, 1500)}
+
+Return ONLY valid JSON: {"questions": ["question 1", "question 2", "question 3"]}`;
+
+  try {
+    const provider = getActiveProvider();
+    const apiKey = state.keys[provider] || getActiveKey();
+    let raw = '';
+    if (provider === 'claude') {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+        body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 200, messages: [{ role: 'user', content: prompt }] }),
+      });
+      const d = await res.json(); raw = d.content?.[0]?.text || '';
+    } else if (provider === 'openai') {
+      const res = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+        body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'user', content: prompt }], max_tokens: 200 }),
+      });
+      const d = await res.json(); raw = d.choices?.[0]?.message?.content || '';
+    } else if (provider.startsWith('custom:')) {
+      const cpName = provider.replace('custom:', '');
+      const cp = state.customProviders.find(p => p.name === cpName);
+      if (cp) {
+        const res = await fetch(cp.endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${cp.key}` },
+          body: JSON.stringify({ model: cp.model, messages: [{ role: 'user', content: prompt }], max_tokens: 200 }),
+        });
+        const d = await res.json(); raw = d.choices?.[0]?.message?.content || '';
+      }
+    } else {
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${state.models.gemini || 'gemini-2.0-flash'}:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }], generationConfig: { maxOutputTokens: 200 } }),
+      });
+      const d = await res.json(); raw = d.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('') || '';
+    }
+
+    const clean = raw.replace(/```json|```/g, '').trim();
+    const parsed = JSON.parse(clean);
+    if (parsed.questions?.length) renderFollowUps(parsed.questions);
+  } catch(e) { /* silent */ }
+}
+
+function renderFollowUps(questions) {
+  // Remove any previous follow-up chips
+  document.querySelectorAll('.followup-chips').forEach(el => el.remove());
+  const area = document.getElementById('chatArea');
+  const chips = document.createElement('div');
+  chips.className = 'followup-chips';
+  questions.forEach(q => {
+    const btn = document.createElement('button');
+    btn.className = 'followup-chip';
+    btn.textContent = q;
+    btn.onclick = () => {
+      document.getElementById('mainInput').value = q;
+      autoResize(document.getElementById('mainInput'));
+      chips.remove();
+      document.getElementById('mainInput').focus();
+    };
+    chips.appendChild(btn);
+  });
+  area.appendChild(chips);
+  area.scrollTop = area.scrollHeight;
+}
+
+// ═══════════════════════════════════════════════════════════
+// SESSION MANAGEMENT
+// ═══════════════════════════════════════════════════════════
+function initSession() {
+  if (state.sessions.length === 0 || !state.currentSessionId) {
+    newSession(true);
+  }
+}
+
+function newSession(silent = false) {
+  // Save current session first
+  if (state.currentSessionId) saveCurrentSession();
+
+  const id = 'sess_' + Date.now();
+  const session = {
+    id, title: 'New Session',
+    createdAt: Date.now(), updatedAt: Date.now(),
+    messages: [], takeaways: [], activeTopic: null,
+  };
+  state.sessions.unshift(session);
+  state.currentSessionId = id;
+  state.messages = [];
+  state.takeaways = [];
+  state.prevTakeawayTexts = [];
+  state.activeTopic = null;
+  saveStateToStorage();
+  if (!silent) {
+    resetChatUI();
+    renderSessionList();
+    updateFilterBar();
+    renderPinnedTopics();
+  }
+}
+
+function saveCurrentSession() {
+  if (!state.currentSessionId) return;
+  const idx = state.sessions.findIndex(s => s.id === state.currentSessionId);
+  if (idx === -1) return;
+  // Auto-title from first user message
+  const firstUser = state.messages.find(m => m.role === 'user');
+  const title = firstUser
+    ? (typeof firstUser.content === 'string' ? firstUser.content : JSON.stringify(firstUser.content)).substring(0, 45) + (firstUser.content.length > 45 ? '...' : '')
+    : 'Session';
+  state.sessions[idx] = {
+    ...state.sessions[idx],
+    title, updatedAt: Date.now(),
+    messages: state.messages,
+    takeaways: state.takeaways,
+    activeTopic: state.activeTopic,
+  };
+  saveStateToStorage();
+  renderSessionList();
+}
+
+function loadSession(id) {
+  if (state.currentSessionId) saveCurrentSession();
+  const session = state.sessions.find(s => s.id === id);
+  if (!session) return;
+  state.currentSessionId = id;
+  state.messages = session.messages || [];
+  state.takeaways = session.takeaways || [];
+  state.activeTopic = session.activeTopic || null;
+  state.prevTakeawayTexts = state.takeaways.map(t => t.point);
+  saveStateToStorage();
+
+  // Rebuild chat UI
+  resetChatUI();
+  updateFilterBar();
+  renderPinnedTopics();
+
+  // Re-render messages
+  if (state.messages.length > 0) {
+    hideChatEmpty();
+    const userMsgs = state.messages.filter(m => m.role === 'user');
+    const aiMsgs = state.messages.filter(m => m.role === 'assistant');
+    // Interleave in order
+    state.messages.forEach(m => {
+      if (m.role === 'user') {
+        const raw = typeof m.content === 'string' ? m.content : JSON.stringify(m.content);
+        appendUserMsg(raw.replace(/\[Context:.*?\]\n\n/s, ''));
+      } else if (m.role === 'assistant') {
+        const parsed = parseResponse(m.content);
+        appendAiMsg(parsed.html, parsed.sources, parsed.citations);
+      }
+    });
+    enableExportButtons();
+  }
+  if (state.takeaways.length) renderTakeaways([], false);
+  renderSessionList();
+}
+
+function deleteSession(id, e) {
+  e.stopPropagation();
+  state.sessions = state.sessions.filter(s => s.id !== id);
+  if (state.currentSessionId === id) {
+    if (state.sessions.length) {
+      loadSession(state.sessions[0].id);
+    } else {
+      newSession(true);
+    }
+  }
+  saveStateToStorage();
+  renderSessionList();
+}
+
+function renderSessionList() {
+  const list = document.getElementById('sessionList');
+  if (!list) return;
+  list.innerHTML = '';
+  if (!state.sessions.length) {
+    list.innerHTML = '<span class="history-empty">No sessions yet</span>';
+    return;
+  }
+  state.sessions.slice(0, 15).forEach(s => {
+    const item = document.createElement('div');
+    item.className = 'session-item' + (s.id === state.currentSessionId ? ' active' : '');
+    const d = new Date(s.updatedAt);
+    const dateStr = d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    item.innerHTML = `
+      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtml(s.title)}">${escHtml(s.title)}</span>
+      <span class="session-date">${dateStr}</span>
+      <button class="session-del" onclick="deleteSession('${s.id}',event)" title="Delete">✕</button>
+    `;
+    item.onclick = (e) => { if (!e.target.classList.contains('session-del')) loadSession(s.id); };
+    list.appendChild(item);
+  });
+}
+
+function resetChatUI() {
+  document.getElementById('chatArea').innerHTML = `
+    <div class="chat-empty" id="chatEmpty">
+      <div class="chat-empty-icon">🧠</div>
+      <h2>What would you like to research?</h2>
+      <p>Ask a question, explore a topic, or drag a document here.</p>
+    </div>`;
+  document.getElementById('takeawaysList').innerHTML = `
+    <div class="takeaway-empty">
+      <div class="takeaway-empty-icon">✦</div>
+      <p>Run a search to see key takeaways here.</p>
+    </div>`;
+  ['saveLocalBtn','notebookBtn','obsidianBtn','exportMdBtn','exportPdfBtn'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.disabled = true;
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// SESSION (legacy clearSession)
+// ═══════════════════════════════════════════════════════════
+function clearSession() {
+  if (!confirm('Start a new research session? Current chat will be saved.')) return;
+  newSession();
+  renderSessionList();
+}
+
+// ═══════════════════════════════════════════════════════════
+// DRAG AND DROP
+// ═══════════════════════════════════════════════════════════
+const chatArea = document.getElementById('chatArea');
+chatArea.addEventListener('dragover', e => { e.preventDefault(); chatArea.style.outline = '2px dashed var(--accent)'; });
+chatArea.addEventListener('dragleave', () => { chatArea.style.outline = ''; });
+chatArea.addEventListener('drop', e => {
+  e.preventDefault();
+  chatArea.style.outline = '';
+  const file = e.dataTransfer.files[0];
+  if (!file) return;
+  if (file.type === 'application/pdf' || file.type.startsWith('text/')) {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      document.getElementById('mainInput').value = `Analyze this document: ${file.name}\n\n${ev.target.result.substring(0, 4000)}`;
+      autoResize(document.getElementById('mainInput'));
+      showToast(`"${file.name}" loaded — press Enter to analyze`);
+    };
+    reader.readAsText(file);
+  } else {
+    showToast('Supported formats: PDF, TXT, MD', 'error');
+  }
+});
+
+// Initial render
+updateApiStatus();
+</script>
+</body>
+</html>
