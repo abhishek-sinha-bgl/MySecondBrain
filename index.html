@@ -376,14 +376,84 @@ body::before{
   padding:6px 10px;background:rgba(192,57,43,.05);
   border-radius:var(--r);border-left:2px solid var(--vermillion);margin-bottom:8px;
 }
-.cc-srcs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
-.cc-src{
-  font-family:var(--mono);font-size:10px;color:var(--cobalt);
-  text-decoration:none;padding:2px 7px;
-  background:var(--cobalt-pale);border-radius:3px;
-  transition:background .18s;
+/* ── SOURCE EVIDENCE DRAWER ── */
+/* accordion toggle */
+.cc-expand-btn{
+  font-family:var(--mono);font-size:10px;color:var(--ink-4);
+  background:none;border:none;cursor:pointer;padding:0;letter-spacing:.3px;
+  display:flex;align-items:center;gap:4px;transition:color .18s;
 }
-.cc-src:hover{background:rgba(37,99,168,.14)}
+.cc-expand-btn:hover{color:var(--cobalt)}
+.cc-expand-btn .caret{transition:transform .22s;display:inline-block}
+.cc.open .cc-expand-btn .caret{transform:rotate(90deg)}
+/* drawer */
+.cc-drawer{
+  display:none;margin-top:12px;padding-top:12px;
+  border-top:1px solid var(--rule-light);
+  animation:drawerIn .2s ease;
+}
+.cc.open .cc-drawer{display:block}
+@keyframes drawerIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+/* dual confidence display */
+.cc-conf-row{
+  display:flex;gap:14px;align-items:stretch;
+  margin-bottom:12px;padding:10px 12px;
+  background:var(--paper-deep);border-radius:var(--r);
+  border:1px solid var(--rule-light);
+}
+.cc-conf-block{flex:1;display:flex;flex-direction:column;gap:3px}
+.cc-conf-label{font-family:var(--mono);font-size:9px;color:var(--ink-4);letter-spacing:.8px;text-transform:uppercase}
+.cc-conf-val{font-size:16px;font-weight:700;font-family:var(--mono);color:var(--ink)}
+.cc-conf-sub{font-family:var(--mono);font-size:9px;color:var(--ink-4)}
+.cc-conf-divider{width:1px;background:var(--rule);margin:0 2px}
+/* source quality bar */
+.sq-bar{display:flex;height:4px;border-radius:2px;overflow:hidden;gap:1px;margin-top:4px}
+.sq-seg{flex:1;border-radius:1px}
+.sq-seg.primary{background:var(--forest)}
+.sq-seg.secondary{background:var(--cobalt)}
+.sq-seg.tertiary{background:var(--amber)}
+.sq-seg.weak{background:var(--vermillion)}
+.sq-seg.none{background:var(--rule)}
+/* source list */
+.src-list{display:flex;flex-direction:column;gap:7px;margin-bottom:12px}
+.src-row{
+  display:flex;gap:9px;align-items:flex-start;padding:8px 10px;
+  border:1px solid var(--rule-light);border-radius:var(--r);
+  background:var(--paper-card);
+}
+.src-tier{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:4px}
+.src-tier.primary{background:var(--forest)}
+.src-tier.secondary{background:var(--cobalt)}
+.src-tier.tertiary{background:var(--amber)}
+.src-tier.weak{background:var(--vermillion)}
+.src-tier.unknown{background:var(--ink-5)}
+.src-body{flex:1;min-width:0}
+.src-link{
+  font-size:12px;color:var(--cobalt);text-decoration:none;
+  display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  line-height:1.4;font-weight:500;
+}
+.src-link:hover{text-decoration:underline}
+.src-meta{font-family:var(--mono);font-size:10px;color:var(--ink-4);margin-top:1px;line-height:1.4}
+.src-tier-badge{
+  font-family:var(--mono);font-size:9px;letter-spacing:.4px;
+  padding:1px 5px;border-radius:2px;flex-shrink:0;align-self:flex-start;
+}
+.src-tier-badge.primary{background:rgba(45,106,79,.12);color:var(--forest)}
+.src-tier-badge.secondary{background:rgba(37,99,168,.10);color:var(--cobalt)}
+.src-tier-badge.tertiary{background:rgba(180,83,9,.10);color:var(--amber)}
+.src-tier-badge.weak{background:rgba(192,57,43,.08);color:var(--vermillion)}
+.src-tier-badge.unknown{background:var(--paper-deep);color:var(--ink-4)}
+/* no sources state */
+.src-none{font-family:var(--mono);font-size:11px;color:var(--ink-4);font-style:italic;padding:6px 0}
+/* re-research button */
+.cc-reresearch{
+  font-family:var(--mono);font-size:10px;color:var(--cobalt);
+  background:var(--cobalt-pale);border:1px solid rgba(37,99,168,.25);
+  border-radius:var(--r);padding:4px 10px;cursor:pointer;
+  transition:all .18s;letter-spacing:.3px;
+}
+.cc-reresearch:hover{background:var(--cobalt);color:var(--paper)}
 .cc-acts{
   display:flex;gap:6px;padding-top:10px;
   border-top:1px solid var(--rule-light);margin-top:4px;
@@ -1280,9 +1350,20 @@ function renderClaims() {
     const confClass = (c.confidence||0) >= 0.7 ? 'hi' : (c.confidence||0) >= 0.35 ? 'me' : 'lo';
     const confLabel = confClass === 'hi' ? 'High' : confClass === 'me' ? 'Medium' : 'Low';
     const isContra = !!c.contradicts;
+    const hasSources = (c.sources||[]).length > 0;
+    const classified = hasSources && (c.sources||[]).every(s=>s.tier);
+    const sqScore = classified ? sourceQualityScore(c.sources) : null;
+    const sqPct = sqScore !== null ? Math.round(sqScore*100) : null;
+
     const card = document.createElement('div');
     card.className = `cc ${isContra ? 'cx' : confClass}`;
     card.dataset.claimId = c.id;
+
+    // Build the tiny source quality preview shown in collapsed state
+    const srcPreview = hasSources
+      ? `<span style="font-family:var(--mono);font-size:9px;color:var(--ink-4)">${(c.sources||[]).length} source${(c.sources||[]).length!==1?'s':''}</span>`
+      : `<span style="font-family:var(--mono);font-size:9px;color:var(--ink-5)">no sources</span>`;
+
     card.innerHTML = `
       <div class="cc-top">
         <span class="cc-num">CLAIM ${String(i+1).padStart(2,'0')}</span>
@@ -1291,13 +1372,24 @@ function renderClaims() {
       <div class="cc-text">${esc(c.text)}</div>
       ${c.why ? `<div class="cc-why">${esc(c.why)}</div>` : ''}
       ${isContra ? `<div class="cc-contra">Contradicts: "${esc(c.contradicts.substring(0,100))}${c.contradicts.length>100?'…':''}"</div>` : ''}
-      ${(c.sources||[]).length ? `<div class="cc-srcs">${c.sources.map(s=>`<a class="cc-src" href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title||s.url)}</a>`).join('')}</div>` : ''}
       <div class="cc-acts">
+        <button class="cc-expand-btn" onclick="toggleClaimDrawer('${c.id}')">
+          <span class="caret">▶</span> Sources &amp; evidence ${srcPreview}
+        </button>
+        <div style="flex:1"></div>
         <button class="cc-act" onclick="copyClaim('${c.id}')">Copy</button>
         <button class="cc-act del" onclick="deleteClaim('${c.id}')">Delete</button>
       </div>
+      <div class="cc-drawer" id="drawer-${c.id}">
+        <div class="src-list"><div class="src-none">Click to load source analysis…</div></div>
+      </div>
     `;
     list.appendChild(card);
+
+    // If already classified, pre-populate the drawer (no extra API call)
+    if (classified) {
+      updateClaimDrawer(card, c);
+    }
   });
 }
 
@@ -1334,6 +1426,266 @@ function deleteClaim(id) {
   t.updatedAt = Date.now();
   save(); renderClaims();
   toast('Claim removed');
+}
+
+function deleteClaim(id) {
+  const t = getTopic();
+  if (!t) return;
+  t.claims = (t.claims||[]).filter(c=>c.id!==id);
+  t.updatedAt = Date.now();
+  save(); renderClaims();
+  toast('Claim removed');
+}
+
+// ═══════════════════════════════════════════════════════════
+// SOURCE CLASSIFICATION ENGINE
+// ═══════════════════════════════════════════════════════════
+
+// Rule-based domain tier lists
+const SOURCE_RULES = {
+  primary: [
+    // Government / official
+    /\.gov($|\/|\.)/, /\.gov\.[a-z]{2}($|\/)/, /\.mil($|\/)/, /\.int($|\/)/,
+    // Major intergovernmental
+    /\bwho\.int\b/, /\bun\.org\b/, /\bunep\.org\b/, /\bimf\.org\b/, /\bworldbank\.org\b/,
+    /\boecd\.org\b/, /\biaea\.org\b/, /\bicrc\.org\b/,
+    // Academic
+    /\.edu($|\/)/, /\.ac\.[a-z]{2}($|\/)/, /\.edu\.[a-z]{2}($|\/)/,
+    /\bnature\.com\b/, /\bscience\.org\b/, /\bpubmed\.ncbi\b/, /\bsciencedirect\.com\b/,
+    /\bjstor\.org\b/, /\bspringer\.com\b/, /\bwiley\.com\b/, /\btandfonline\.com\b/,
+    // Primary newswires
+    /\breuters\.com\b/, /\bapnews\.com\b/, /\bafp\.com\b/,
+    // Official statistics
+    /\bstatista\.com\b/, /\bworldometers\.info\b/,
+  ],
+  secondary: [
+    // Major newspapers / broadcasters
+    /\bnytimes\.com\b/, /\bwashingtonpost\.com\b/, /\bguardian\.com\b/,
+    /\btheguardian\.com\b/, /\bbbc\.com\b/, /\bbbc\.co\.uk\b/,
+    /\bft\.com\b/, /\beconomist\.com\b/, /\bwsj\.com\b/, /\bbloomberg\.com\b/,
+    /\bpolitico\.com\b/, /\bthehill\.com\b/, /\baxios\.com\b/,
+    /\bnpr\.org\b/, /\bpbs\.org\b/, /\baltjazeera\.com\b/,
+    /\bthetimes\.co\.uk\b/, /\btelegraph\.co\.uk\b/, /\bindependent\.co\.uk\b/,
+    /\bhindustantimes\.com\b/, /\bthehindu\.com\b/, /\btimesofindia\.com\b/,
+    /\bscmp\.com\b/, /\bdw\.com\b/, /\bfrance24\.com\b/,
+    // Industry/research bodies
+    /\bpewresearch\.org\b/, /\bgallup\.com\b/, /\bipsos\.com\b/,
+    /\bmckinsey\.com\b/, /\bbain\.com\b/, /\bdeloitte\.com\b/,
+    /\bweforum\.org\b/, /\bcfr\.org\b/, /\bbrookings\.edu\b/,
+    /\bbbc\.in\b/,
+  ],
+  weak: [
+    // Strong SEO/content farm signals in URL
+    /\d{4}\/\d{2}\/\d{2}\/top-\d+/, /\/best-\d+/, /\/\d+-ways-to/,
+    /\blisticle\b/, /\bcontent-farm\b/,
+    // Known low-quality domains
+    /\bbuzzfeed\.com\b/, /\bviralnova\b/, /\bupworthy\.com\b/,
+    // Parked/placeholder
+    /example\.(com|org|net)/,
+  ],
+};
+
+const SOURCE_TIER_META = {
+  primary:   { label: 'Primary',   desc: 'Government, academic, or major newswire source' },
+  secondary: { label: 'Secondary', desc: 'Established news outlet or research body' },
+  tertiary:  { label: 'Tertiary',  desc: 'Specialised or niche publication' },
+  weak:      { label: 'Weak',      desc: 'Low-authority or SEO-optimised content' },
+  unknown:   { label: 'Unknown',   desc: 'Could not classify source' },
+};
+
+// Cache: url → {tier, reason}
+const _srcCache = {};
+
+function classifyByRules(url) {
+  if (!url) return null;
+  try {
+    const u = new URL(url);
+    const host = u.hostname.toLowerCase();
+    const full = url.toLowerCase();
+    for (const pat of SOURCE_RULES.primary)   if (pat.test(host) || pat.test(full)) return 'primary';
+    for (const pat of SOURCE_RULES.secondary) if (pat.test(host) || pat.test(full)) return 'secondary';
+    for (const pat of SOURCE_RULES.weak)       if (pat.test(full)) return 'weak';
+  } catch(e) {}
+  return null; // ambiguous — needs LLM
+}
+
+function sourceQualityScore(sources) {
+  if (!sources?.length) return 0;
+  const tierWeights = { primary: 1.0, secondary: 0.72, tertiary: 0.44, weak: 0.15, unknown: 0.30 };
+  const sum = sources.reduce((s, src) => s + (tierWeights[src.tier || 'unknown'] || 0.30), 0);
+  return Math.min(1, sum / Math.max(sources.length, 1));
+}
+
+async function classifySourcesForClaim(sources) {
+  if (!sources?.length) return sources;
+  const toClassify = [];
+
+  // Step 1: rule-based pass
+  const classified = sources.map(src => {
+    if (_srcCache[src.url]) return { ...src, ..._srcCache[src.url] };
+    const tier = classifyByRules(src.url);
+    if (tier) {
+      const result = { tier, reason: SOURCE_TIER_META[tier].desc };
+      _srcCache[src.url] = result;
+      return { ...src, ...result };
+    }
+    toClassify.push(src);
+    return src; // placeholder
+  });
+
+  // Step 2: LLM pass for ambiguous sources only
+  if (toClassify.length > 0) {
+    const key = getKey();
+    if (key) {
+      const prompt = `Classify each source's authority tier for research purposes.
+Tiers: primary (govt/academic/major newswire), secondary (established newspaper/industry body), tertiary (niche/lifestyle/travel/forum), weak (SEO content/no byline/listicle).
+
+Sources to classify (JSON array):
+${JSON.stringify(toClassify.map(s => ({ url: s.url, title: s.title || '' })))}
+
+Return ONLY valid JSON, no markdown:
+{"results":[{"url":"...","tier":"primary|secondary|tertiary|weak","reason":"one sentence"}]}`;
+
+      try {
+        const prov = getActiveProvider();
+        let raw = '';
+        if (prov === 'claude') {
+          const r = await fetch('https://api.anthropic.com/v1/messages', {
+            method:'POST', headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+            body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 400, messages:[{role:'user',content:prompt}] })
+          });
+          const d = await r.json(); raw = d.content?.[0]?.text || '';
+        } else if (prov === 'openai') {
+          const r = await fetch('https://api.openai.com/v1/chat/completions', {
+            method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
+            body: JSON.stringify({ model:'gpt-4o-mini', messages:[{role:'user',content:prompt}], max_tokens:400 })
+          });
+          const d = await r.json(); raw = d.choices?.[0]?.message?.content || '';
+        } else if (prov.startsWith('custom:')) {
+          const n = prov.replace('custom:',''), cp = state.customProviders.find(p=>p.name===n);
+          if (cp) {
+            const r = await fetch(cp.endpoint, {
+              method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+cp.key},
+              body: JSON.stringify({ model:cp.model, messages:[{role:'user',content:prompt}], max_tokens:400 })
+            });
+            const d = await r.json(); raw = d.choices?.[0]?.message?.content || '';
+          }
+        } else {
+          const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${state.models.gemini||'gemini-2.0-flash'}:generateContent?key=${key}`, {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ contents:[{role:'user',parts:[{text:prompt}]}], generationConfig:{maxOutputTokens:400} })
+          });
+          const d = await r.json(); raw = d.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join('') || '';
+        }
+        let clean = raw.replace(/```json|```/g,'').trim();
+        const ji = clean.indexOf('{'); if (ji > 0) clean = clean.substring(ji);
+        const parsed = JSON.parse(clean);
+        (parsed.results || []).forEach(res => {
+          _srcCache[res.url] = { tier: res.tier, reason: res.reason };
+        });
+      } catch(e) {
+        // LLM classification failed — mark as unknown
+        toClassify.forEach(s => { _srcCache[s.url] = { tier: 'unknown', reason: 'Could not classify' }; });
+      }
+    }
+
+    // Merge LLM results back
+    return classified.map(src => {
+      if (src.tier) return src;
+      const cached = _srcCache[src.url];
+      return cached ? { ...src, ...cached } : { ...src, tier: 'unknown', reason: 'Could not classify' };
+    });
+  }
+
+  return classified;
+}
+
+// ── Claim card accordion toggle ──
+function toggleClaimDrawer(claimId) {
+  const card = document.querySelector(`.cc[data-claim-id="${claimId}"]`);
+  if (!card) return;
+  const isOpen = card.classList.contains('open');
+  if (isOpen) { card.classList.remove('open'); return; }
+  card.classList.add('open');
+
+  // Classify sources if not yet done
+  const t = getTopic();
+  const claim = (t?.claims||[]).find(c=>c.id===claimId);
+  if (!claim) return;
+
+  const needsClassification = (claim.sources||[]).some(s => !s.tier);
+  if (needsClassification) {
+    // Show loading state in drawer
+    const drawerSrcs = card.querySelector('.src-list');
+    if (drawerSrcs) drawerSrcs.innerHTML = `<div class="src-none">Classifying sources…</div>`;
+
+    classifySourcesForClaim(claim.sources || []).then(classified => {
+      claim.sources = classified;
+      save();
+      // Re-render just the drawer
+      updateClaimDrawer(card, claim);
+    });
+  }
+}
+
+function updateClaimDrawer(card, claim) {
+  const sqScore = sourceQualityScore(claim.sources);
+  const sqPct = Math.round(sqScore * 100);
+  const sqLabel = sqPct >= 75 ? 'Strong' : sqPct >= 50 ? 'Moderate' : sqPct >= 25 ? 'Limited' : 'Weak';
+
+  const tiers = (claim.sources||[]).map(s=>s.tier||'unknown');
+  const sqBarSegs = tiers.length
+    ? tiers.map(t=>`<div class="sq-seg ${t}"></div>`).join('')
+    : `<div class="sq-seg none" style="flex:3"></div>`;
+
+  const srcRows = (claim.sources||[]).length
+    ? (claim.sources||[]).map(s => `
+        <div class="src-row">
+          <div class="src-tier ${s.tier||'unknown'}"></div>
+          <div class="src-body">
+            <a class="src-link" href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title||s.url)}</a>
+            <div class="src-meta">${esc(s.reason||SOURCE_TIER_META[s.tier||'unknown']?.desc||'')}</div>
+          </div>
+          <span class="src-tier-badge ${s.tier||'unknown'}">${SOURCE_TIER_META[s.tier||'unknown']?.label||'Unknown'}</span>
+        </div>`).join('')
+    : `<div class="src-none">No sources recorded — this claim came from the model's training knowledge or web search without grounding metadata.</div>`;
+
+  const llmPct = Math.round((claim.confidence||0)*100);
+  const llmLabel = llmPct >= 70 ? 'High' : llmPct >= 35 ? 'Medium' : 'Low';
+
+  card.querySelector('.cc-drawer').innerHTML = `
+    <div class="cc-conf-row">
+      <div class="cc-conf-block">
+        <div class="cc-conf-label">LLM confidence</div>
+        <div class="cc-conf-val">${llmPct}%</div>
+        <div class="cc-conf-sub">${llmLabel} — model's internal certainty</div>
+      </div>
+      <div class="cc-conf-divider"></div>
+      <div class="cc-conf-block">
+        <div class="cc-conf-label">Source quality</div>
+        <div class="cc-conf-val">${sqPct}%</div>
+        <div class="sq-bar">${sqBarSegs}</div>
+        <div class="cc-conf-sub">${sqLabel} — based on ${tiers.length} source${tiers.length!==1?'s':''}</div>
+      </div>
+    </div>
+    <div class="src-list">${srcRows}</div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <button class="cc-reresearch" onclick="reresearchClaim('${claim.id}')">↺ Find better sources</button>
+      <button class="cc-act del" onclick="deleteClaim('${claim.id}')">Remove claim</button>
+    </div>
+  `;
+}
+
+function reresearchClaim(claimId) {
+  const t = getTopic();
+  const claim = (t?.claims||[]).find(c=>c.id===claimId);
+  if (!claim) return;
+  // Fire a targeted follow-up query into the chat
+  const q = `Find authoritative primary sources to verify this claim: "${claim.text.substring(0,120)}"`;
+  document.getElementById('chatInput').value = q;
+  document.getElementById('chatInput').focus();
+  // scroll chat into view on mobile
+  sendMessage(q);
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1586,16 +1938,21 @@ function appendAbsorbPanel(claims, citations) {
       render();
     };
     const saveBtn = panel.querySelector('.absorb-btn.save');
-    if (saveBtn) saveBtn.onclick = () => {
+    if (saveBtn) saveBtn.onclick = async () => {
       const selected = claims.filter((_,i) => checkState[i]);
       if (!selected.length) { toast('Select at least one claim','err'); return; }
       const t = getTopic();
       if (!t) return;
       if (!t.claims) t.claims = [];
-      const existing = t.claims.map(c=>c.text.toLowerCase());
       let added = 0;
+
+      // Classify citations once for all selected claims
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Classifying sources…';
+      const classifiedCitations = await classifySourcesForClaim(citations.slice(0,5));
+      saveBtn.disabled = false;
+
       selected.forEach(c => {
-        // detect contradiction against existing
         const contra = t.claims.find(ex =>
           ex.text.toLowerCase() !== c.text.toLowerCase() &&
           roughContradict(ex.text, c.text)
@@ -1605,7 +1962,7 @@ function appendAbsorbPanel(claims, citations) {
           text: c.text,
           why: c.why || '',
           confidence: c.confidence,
-          sources: citations.slice(0, 3),
+          sources: classifiedCitations.slice(0,3),
           contradicts: contra ? contra.text : null,
           addedAt: Date.now(),
         });
@@ -1785,7 +2142,13 @@ ${existing ? `\nExisting claims in knowledge base:\n${existing}` : ''}
 Return ONLY valid JSON, no markdown:
 {"claims":[{"text":"concise factual claim","why":"one sentence why this matters","confidence":0.8,"contradicts":"exact text of contradicted existing claim or null"}]}
 
-Confidence: 0.9=well-sourced, 0.6=single source, 0.3=uncertain. Only include claims with genuine informational value.`;
+Confidence scoring — weight these factors:
+- 0.85–1.0: Claim explicitly backed by named primary sources (government data, peer-reviewed study, official statistics, major newswire)
+- 0.60–0.84: Backed by established news outlets or named experts, single source acceptable
+- 0.35–0.59: General knowledge, aggregated sources, or travel/lifestyle sites without primary citations
+- 0.10–0.34: Anecdotal, forum-based, or model inference with no clear source
+
+Only include claims with genuine informational value.`;
 
   try {
     let raw = '';
