@@ -1879,9 +1879,9 @@ Return ONLY valid JSON, no markdown:
         }
         let clean = raw.replace(/```json|```/g,'').trim();
         const ji = clean.indexOf('{'); if (ji > 0) clean = clean.substring(ji);
-        const parsed = JSON.parse(clean);
-        (parsed.results || []).forEach(res => {
-          _srcCache[res.url] = { tier: res.tier, reason: res.reason };
+        const parsed = parseClaimsFromRaw(raw) || JSON.parse(clean);
+        (parsed.results || (Array.isArray(parsed) ? parsed : []) || []).forEach(res => {
+          if (res.url) _srcCache[res.url] = { tier: res.tier, reason: res.reason };
         });
       } catch(e) {
         // LLM classification failed — mark as unknown
@@ -2433,53 +2433,140 @@ async function callCustom(messages, cp) {
 }
 
 // ── CLAIM EXTRACTION ──
+// ── Robust JSON extraction — handles preamble, flat arrays, nested, think-tags ──
+function parseClaimsFromRaw(raw) {
+  if (!raw) return null;
+
+  // Step 1: strip reasoning/think tags (o-series, DeepSeek, some OSS)
+  let s = raw.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+
+  // Step 2: strip markdown fences
+  s = s.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+
+  // Step 3: try to find a JSON block — object first, then array
+  // Find the first { or [ and attempt parse from there
+  function tryParse(str) {
+    // Try as-is
+    try { return JSON.parse(str); } catch(e) {}
+    // Find first { or [
+    const oi = str.indexOf('{'), ai = str.indexOf('[');
+    let start = -1, isArr = false;
+    if (oi >= 0 && (ai < 0 || oi <= ai)) { start = oi; isArr = false; }
+    else if (ai >= 0) { start = ai; isArr = true; }
+    if (start < 0) return null;
+    const sub = str.substring(start);
+    try { return JSON.parse(sub); } catch(e) {}
+    // Try to extract a balanced block
+    const open = isArr ? '[' : '{', close = isArr ? ']' : '}';
+    let depth = 0, end = -1;
+    for (let i = 0; i < sub.length; i++) {
+      if (sub[i] === open) depth++;
+      else if (sub[i] === close) { depth--; if (depth === 0) { end = i; break; } }
+    }
+    if (end > 0) {
+      try { return JSON.parse(sub.substring(0, end + 1)); } catch(e) {}
+    }
+    return null;
+  }
+
+  const parsed = tryParse(s);
+  if (!parsed) return null;
+
+  // Step 4: normalise to array of claim objects regardless of shape
+  let claims = [];
+  if (Array.isArray(parsed)) {
+    // flat array: [{text,why,confidence,...}]
+    claims = parsed;
+  } else if (Array.isArray(parsed.claims)) {
+    claims = parsed.claims;
+  } else if (Array.isArray(parsed.data?.claims)) {
+    claims = parsed.data.claims;
+  } else if (typeof parsed === 'object') {
+    // Some models return {claim1:{...}, claim2:{...}}
+    const vals = Object.values(parsed).filter(v => v && typeof v === 'object' && v.text);
+    if (vals.length) claims = vals;
+  }
+
+  // Step 5: coerce each claim to expected shape
+  return claims.map(c => {
+    // handle text aliased as claim/statement/finding
+    const text = c.text || c.claim || c.statement || c.finding || '';
+    const why = c.why || c.rationale || c.reason || c.significance || '';
+    const conf = typeof c.confidence === 'number' ? c.confidence
+      : typeof c.confidence === 'string' ? parseFloat(c.confidence) || 0.5
+      : 0.5;
+    return {
+      text: String(text).trim(),
+      why: String(why).trim(),
+      confidence: Math.max(0, Math.min(1, conf)),
+      contradicts: c.contradicts || null,
+    };
+  }).filter(c => c.text.length > 10); // drop empty/malformed
+}
+
 async function extractClaims(query, response, citations) {
   const key = getKey();
   if (!key) return [];
   const prov = getActiveProvider();
   const t = getTopic();
   const existing = (t?.claims||[]).map(c=>c.text).join('\n');
-  const prompt = `From this research exchange, extract 2-4 key factual claims worth retaining.
+
+  // Use a more directive prompt that works with OSS/reasoning models
+  const isCustom = prov.startsWith('custom:');
+  const prompt = `Extract 2-4 key factual claims from this research exchange.
 
 Query: "${query}"
 Response: ${response.substring(0,2500)}
-${existing ? `\nExisting claims in knowledge base:\n${existing}` : ''}
+${existing ? `\nExisting claims:\n${existing}` : ''}
 
-Return ONLY valid JSON, no markdown:
-{"claims":[{"text":"concise factual claim","why":"one sentence why this matters","confidence":0.8,"contradicts":"exact text of contradicted existing claim or null"}]}
+Output a JSON object with this exact structure — no other text, no markdown:
+{"claims":[{"text":"concise factual claim","why":"one sentence why it matters","confidence":0.75,"contradicts":null}]}
 
-Confidence scoring — weight these factors:
-- 0.85–1.0: Claim explicitly backed by named primary sources (government data, peer-reviewed study, official statistics, major newswire)
-- 0.60–0.84: Backed by established news outlets or named experts, single source acceptable
-- 0.35–0.59: General knowledge, aggregated sources, or travel/lifestyle sites without primary citations
-- 0.10–0.34: Anecdotal, forum-based, or model inference with no clear source
-
-Only include claims with genuine informational value.`;
+Confidence: 0.85+ = named primary source (govt/academic/newswire). 0.60-0.84 = established outlet/expert. 0.35-0.59 = general/aggregated. 0.10-0.34 = anecdotal/inferred.
+"contradicts" = exact text of a contradicted existing claim, or null.`;
 
   try {
     let raw = '';
-    if(prov==='claude'){
-      const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:state.models.claude||'claude-haiku-4-5-20251001',max_tokens:600,messages:[{role:'user',content:prompt}]})});
-      const d=await r.json(); raw=d.content?.[0]?.text||'';
-    } else if(prov==='openai'){
-      const r=await fetch('https://api.openai.com/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify({model:'gpt-4o-mini',messages:[{role:'user',content:prompt}],max_tokens:600})});
-      const d=await r.json(); raw=d.choices?.[0]?.message?.content||'';
-    } else if(prov.startsWith('custom:')){
-      const n=prov.replace('custom:',''),cp=state.customProviders.find(p=>p.name===n);
-      if(cp){const r=await fetch(cp.endpoint,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+cp.key},body:JSON.stringify({model:cp.model,messages:[{role:'user',content:prompt}],max_tokens:600})});const d=await r.json();raw=d.choices?.[0]?.message?.content||'';}
+    // Use higher max_tokens for custom/OSS models which tend to be more verbose
+    const maxTok = isCustom ? 1200 : 800;
+
+    if (prov === 'claude') {
+      const r = await fetch('https://api.anthropic.com/v1/messages', {
+        method:'POST', headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+        body: JSON.stringify({ model: state.models.claude||'claude-haiku-4-5-20251001', max_tokens: maxTok, messages:[{role:'user',content:prompt}] })
+      });
+      const d = await r.json(); raw = d.content?.[0]?.text || '';
+    } else if (prov === 'openai') {
+      const r = await fetch('https://api.openai.com/v1/chat/completions', {
+        method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
+        body: JSON.stringify({ model:'gpt-4o-mini', messages:[{role:'user',content:prompt}], max_tokens: maxTok })
+      });
+      const d = await r.json(); raw = d.choices?.[0]?.message?.content || '';
+    } else if (isCustom) {
+      const n = prov.replace('custom:',''), cp = state.customProviders.find(p=>p.name===n);
+      if (cp) {
+        const r = await fetch(cp.endpoint, {
+          method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+cp.key},
+          body: JSON.stringify({ model: cp.model, messages:[{role:'user',content:prompt}], max_tokens: maxTok })
+        });
+        const d = await r.json(); raw = d.choices?.[0]?.message?.content || '';
+      }
     } else {
-      const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${state.models.gemini||'gemini-2.0-flash'}:generateContent?key=${key}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{maxOutputTokens:600}})});
-      const d=await r.json(); raw=d.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join('')||'';
+      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${state.models.gemini||'gemini-2.0-flash'}:generateContent?key=${key}`, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ contents:[{role:'user',parts:[{text:prompt}]}], generationConfig:{maxOutputTokens: maxTok} })
+      });
+      const d = await r.json(); raw = d.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join('') || '';
     }
-    let clean = raw.replace(/```json|```/g,'').trim();
-    const jIdx=clean.indexOf('{'); if(jIdx>0) clean=clean.substring(jIdx);
-    const parsed=JSON.parse(clean);
-    return (parsed.claims||[]).map(c=>({
+
+    const claims = parseClaimsFromRaw(raw);
+    if (!claims?.length) return [];
+    return claims.map(c => ({
       ...c,
-      confClass: c.confidence>=0.7?'hi':c.confidence>=0.35?'me':'lo',
-      confLabel: c.confidence>=0.7?'High':c.confidence>=0.35?'Medium':'Low',
+      confClass: c.confidence >= 0.7 ? 'hi' : c.confidence >= 0.35 ? 'me' : 'lo',
+      confLabel: c.confidence >= 0.7 ? 'High' : c.confidence >= 0.35 ? 'Medium' : 'Low',
     }));
-  } catch(e){ return []; }
+  } catch(e) { return []; }
 }
 
 async function getFollowUps(query, response) {
@@ -2498,7 +2585,8 @@ Return ONLY JSON: {"questions":["q1","q2","q3"]}`;
     else if(prov.startsWith('custom:')){const n=prov.replace('custom:',''),cp=state.customProviders.find(p=>p.name===n);if(cp){const r=await fetch(cp.endpoint,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+cp.key},body:JSON.stringify({model:cp.model,messages:[{role:'user',content:prompt}],max_tokens:200})});const d=await r.json();raw=d.choices?.[0]?.message?.content||'';}}
     else{const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${state.models.gemini||'gemini-2.0-flash'}:generateContent?key=${key}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{maxOutputTokens:200}})}); const d=await r.json();raw=d.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join('')||'';}
     let clean=raw.replace(/```json|```/g,'').trim(); const jIdx=clean.indexOf('{');if(jIdx>0)clean=clean.substring(jIdx);
-    return JSON.parse(clean).questions||[];
+    const parsed = parseClaimsFromRaw(raw);
+    return (parsed && (parsed.questions || (Array.isArray(parsed) ? parsed : null))) || JSON.parse(clean).questions || [];
   }catch(e){return [];}
 }
 
