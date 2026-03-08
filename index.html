@@ -240,12 +240,12 @@ body::before{
 .tc-hdr{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
 .tc-title{font-family:var(--serif);font-size:17px;font-weight:600;color:var(--ink);line-height:1.3;letter-spacing:-.2px}
 .tc-when{font-family:var(--mono);font-size:10px;color:var(--ink-5);white-space:nowrap;padding-top:2px}
-.tc-lead{font-size:13px;color:var(--ink-3);line-height:1.65;font-style:italic}
+.tc-lead{font-size:14px;color:var(--ink-2);line-height:1.65;font-style:italic}
 .tc-foot{
   display:flex;align-items:center;gap:10px;
   padding-top:12px;border-top:1px solid var(--rule-light);margin-top:auto;
 }
-.tc-stat{font-family:var(--mono);font-size:10px;color:var(--ink-4)}
+.tc-stat{font-family:var(--mono);font-size:11px;color:var(--ink-3)}
 .conf-track{flex:1;height:2px;background:var(--rule);border-radius:1px;overflow:hidden}
 .conf-fill{height:100%;border-radius:1px;transition:width .4s ease}
 .contra-badge{font-family:var(--mono);font-size:10px;color:var(--vermillion);display:flex;align-items:center;gap:3px}
@@ -273,24 +273,51 @@ body::before{
 }
 .back-btn:hover{color:var(--cobalt)}
 .topic-name-input{
-  font-family:var(--serif);font-size:26px;font-weight:700;
+  font-family:var(--serif);font-size:28px;font-weight:700;
   color:var(--ink);letter-spacing:-.4px;line-height:1.2;
   background:none;border:none;outline:none;width:100%;cursor:text;
 }
 .topic-name-input::placeholder{color:var(--ink-5)}
-.cp-meta{display:flex;gap:20px;align-items:center;margin-top:10px;flex-wrap:wrap}
-.cp-meta-i{font-family:var(--mono);font-size:11px;color:var(--ink-4)}
-.cp-meta-i strong{color:var(--ink-2)}
+.cp-meta{display:flex;gap:22px;align-items:baseline;margin-top:12px;flex-wrap:wrap}
+.cp-meta-i{font-family:var(--mono);font-size:13px;color:var(--ink-3);letter-spacing:.2px}
+.cp-meta-i strong{color:var(--ink);font-size:15px;font-weight:700}
+.cp-meta-i.contra{color:var(--vermillion)}
+.cp-meta-i.contra strong{color:var(--vermillion)}
 
 /* toolbar */
 .cp-toolbar{display:flex;gap:6px;align-items:center;margin-bottom:16px;flex-wrap:wrap}
 .f-chip{
-  padding:3px 10px;border-radius:20px;border:1px solid var(--rule);
-  background:transparent;font-family:var(--mono);font-size:10px;
-  color:var(--ink-4);cursor:pointer;transition:all .18s;letter-spacing:.3px;
+  padding:4px 12px;border-radius:20px;border:1px solid var(--rule);
+  background:transparent;font-family:var(--mono);font-size:11px;
+  color:var(--ink-3);cursor:pointer;transition:all .18s;letter-spacing:.3px;
 }
 .f-chip:hover{border-color:var(--ink-3);color:var(--ink-2)}
 .f-chip.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.f-chip.kp{border-color:var(--cobalt);color:var(--cobalt)}
+.f-chip.kp:hover{background:var(--cobalt-pale)}
+.f-chip.kp.on{background:var(--cobalt);color:var(--paper);border-color:var(--cobalt)}
+/* Key Points panel */
+.kp-panel{
+  background:var(--paper-deep);border:1px solid var(--rule);
+  border-radius:var(--rl);padding:16px 18px;margin-bottom:4px;
+  display:flex;flex-direction:column;gap:12px;
+}
+.kp-section{display:flex;flex-direction:column;gap:7px}
+.kp-section-title{
+  font-family:var(--mono);font-size:10px;letter-spacing:1px;text-transform:uppercase;
+  color:var(--ink-4);padding-bottom:5px;border-bottom:1px solid var(--rule-light);
+}
+.kp-item{
+  display:flex;gap:10px;align-items:flex-start;padding:8px 10px;
+  background:var(--paper-card);border-radius:var(--r);border:1px solid var(--rule-light);
+}
+.kp-item-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:5px}
+.kp-item-dot.hi{background:var(--forest)}
+.kp-item-dot.me{background:var(--amber)}
+.kp-item-dot.cx{background:var(--vermillion)}
+.kp-item-dot.lo{background:var(--slate)}
+.kp-item-text{font-size:13.5px;color:var(--ink-2);line-height:1.5}
+.kp-note{font-size:12px;color:var(--ink-4);font-style:italic;text-align:center;padding:4px 0}
 
 /* claim card */
 .claim-list{display:flex;flex-direction:column;gap:14px}
@@ -312,6 +339,11 @@ body::before{
 [data-theme="obsidian"] .cc::before{width:1px;box-shadow:0 0 6px currentColor}
 /* Forest: italic serif claim text */
 [data-theme="forest"] .cc-text{font-style:italic}
+/* Dark theme contrast boosts */
+[data-theme="obsidian"] .cc-why,[data-theme="forest"] .cc-why{color:var(--ink-2)}
+[data-theme="obsidian"] .tc-lead,[data-theme="forest"] .tc-lead{color:var(--ink-2)}
+[data-theme="obsidian"] .cp-meta-i,[data-theme="forest"] .cp-meta-i{color:var(--ink-2)}
+[data-theme="obsidian"] .kp-item-text,[data-theme="forest"] .kp-item-text{color:var(--ink-2)}
 /* Obsidian/Forest: wall header accent line */
 [data-theme="obsidian"] .wall-hdr,[data-theme="forest"] .wall-hdr{border-bottom-color:var(--cobalt)}
 [data-theme="obsidian"] .cp-hdr,[data-theme="forest"] .cp-hdr{border-bottom-color:var(--cobalt)}
@@ -325,20 +357,20 @@ body::before{
 [data-theme="slate"] .cc-text{font-family:var(--sans)}
 .cc:hover{box-shadow:var(--shadow)}
 .cc-top{display:flex;align-items:center;gap:8px;margin-bottom:7px}
-.cc-num{font-family:var(--mono);font-size:9px;color:var(--ink-5);letter-spacing:.8px;text-transform:uppercase}
+.cc-num{font-family:var(--mono);font-size:10px;color:var(--ink-4);letter-spacing:.8px;text-transform:uppercase}
 .conf-pip{
-  padding:1px 6px;border-radius:3px;
-  font-family:var(--mono);font-size:9px;letter-spacing:.4px;
+  padding:2px 7px;border-radius:3px;
+  font-family:var(--mono);font-size:10px;letter-spacing:.4px;
 }
-.conf-pip.hi{background:rgba(45,106,79,.1);color:var(--forest)}
-.conf-pip.me{background:rgba(180,83,9,.1);color:var(--amber)}
-.conf-pip.lo{background:rgba(100,116,139,.1);color:var(--slate)}
-.conf-pip.cx{background:rgba(192,57,43,.08);color:var(--vermillion)}
+.conf-pip.hi{background:rgba(45,106,79,.12);color:var(--forest)}
+.conf-pip.me{background:rgba(180,83,9,.12);color:var(--amber)}
+.conf-pip.lo{background:rgba(100,116,139,.12);color:var(--slate)}
+.conf-pip.cx{background:rgba(192,57,43,.10);color:var(--vermillion)}
 .cc-text{
-  font-family:var(--serif);font-size:15.5px;font-weight:500;
+  font-family:var(--serif);font-size:17px;font-weight:500;
   color:var(--ink);line-height:1.55;margin-bottom:6px;letter-spacing:-.1px;
 }
-.cc-why{font-size:13px;color:var(--ink-3);line-height:1.6;font-style:italic;margin-bottom:8px}
+.cc-why{font-size:14px;color:var(--ink-2);line-height:1.6;font-style:italic;margin-bottom:8px}
 .cc-contra{
   font-size:12px;color:var(--vermillion);font-style:italic;
   padding:6px 10px;background:rgba(192,57,43,.05);
@@ -621,11 +653,11 @@ select.fi{cursor:pointer}
 .sp-name{flex:1;font-size:13px;color:var(--ink)}
 .sp-model{font-family:var(--mono);font-size:10px;color:var(--ink-4)}
 .tiny{
-  font-family:var(--mono);font-size:10px;padding:2px 8px;
-  border:1px solid var(--rule);border-radius:var(--r);
-  background:none;cursor:pointer;color:var(--ink-4);transition:all .18s;
+  font-family:var(--mono);font-size:11px;padding:4px 10px;
+  border:1px solid var(--cobalt);border-radius:var(--r);
+  background:var(--cobalt-pale);cursor:pointer;color:var(--cobalt);transition:all .18s;
 }
-.tiny:hover{border-color:var(--ink-3);color:var(--ink-2)}
+.tiny:hover{background:var(--cobalt);color:var(--paper)}
 .tiny.use{color:var(--cobalt);border-color:rgba(37,99,168,.3)}
 /* edit banner */
 .edit-banner{
@@ -776,6 +808,7 @@ select.fi{cursor:pointer}
         <button class="f-chip" onclick="filterClaims('hi',this)">High confidence</button>
         <button class="f-chip" onclick="filterClaims('cx',this)">Contradictions</button>
         <button class="f-chip" onclick="filterClaims('me',this)">Uncertain</button>
+        <button class="f-chip kp" onclick="filterClaims('kp',this)" title="AI digest: top claims, contradictions and uncertainties at a glance">⚡ Key Points</button>
       </div>
       <div class="claim-list stagger" id="claimList"></div>
     </div>
@@ -1160,7 +1193,67 @@ function renderClaims() {
   list.innerHTML = '';
   if (!t) return;
 
-  const claims = (t.claims || []).filter(c => {
+  const all = t.claims || [];
+  const avgConf = all.length ? all.reduce((s,c) => s + (c.confidence||0.5), 0) / all.length : 0;
+  const contraCount = all.filter(c => c.contradicts).length;
+  const uncertainCount = all.filter(c => (c.confidence||0) < 0.35).length;
+
+  // Meta bar — prominent
+  document.getElementById('cpMeta').innerHTML =
+    `<span class="cp-meta-i"><strong>${all.length}</strong> claim${all.length!==1?'s':''}</span>
+     <span class="cp-meta-i">avg confidence <strong>${Math.round(avgConf*100)}%</strong></span>
+     ${contraCount ? `<span class="cp-meta-i contra"><strong>${contraCount}</strong> contradiction${contraCount!==1?'s':''}</span>` : ''}
+     ${uncertainCount ? `<span class="cp-meta-i" style="color:var(--amber)"><strong>${uncertainCount}</strong> uncertain</span>` : ''}`;
+
+  // ── KEY POINTS panel ──
+  if (state.currentFilter === 'kp') {
+    const hiClaims  = all.filter(c => !c.contradicts && (c.confidence||0) >= 0.7)
+                         .sort((a,b) => (b.confidence||0)-(a.confidence||0)).slice(0,3);
+    const cxClaims  = all.filter(c => c.contradicts).slice(0,3);
+    const loClaims  = all.filter(c => (c.confidence||0) < 0.35).slice(0,3);
+
+    const meClaims  = all.filter(c => !c.contradicts && (c.confidence||0) >= 0.35 && (c.confidence||0) < 0.7)
+                         .slice(0,2);
+
+    const makeItems = (items, dot) => items.map(c =>
+      `<div class="kp-item">
+        <div class="kp-item-dot ${dot}"></div>
+        <div class="kp-item-text">${esc(c.text)}</div>
+       </div>`
+    ).join('');
+
+    let sections = '';
+    if (hiClaims.length) sections += `
+      <div class="kp-section">
+        <div class="kp-section-title">✓ Strongest findings</div>
+        ${makeItems(hiClaims,'hi')}
+      </div>`;
+    if (meClaims.length) sections += `
+      <div class="kp-section">
+        <div class="kp-section-title">~ Supporting (medium confidence)</div>
+        ${makeItems(meClaims,'me')}
+      </div>`;
+    if (cxClaims.length) sections += `
+      <div class="kp-section">
+        <div class="kp-section-title">⚠ Contradictions to investigate</div>
+        ${makeItems(cxClaims,'cx')}
+      </div>`;
+    if (loClaims.length) sections += `
+      <div class="kp-section">
+        <div class="kp-section-title">? Uncertain — needs more research</div>
+        ${makeItems(loClaims,'lo')}
+      </div>`;
+
+    if (!all.length) {
+      list.innerHTML = `<div class="claims-empty"><div class="claims-empty-icon">💡</div><h3>No claims yet</h3><p>Absorb some research findings first.</p></div>`;
+    } else {
+      list.innerHTML = `<div class="kp-panel">${sections}</div>
+        <div class="kp-note">Showing top items per category · <button onclick="filterClaims('all',document.querySelector('.f-chip'))" style="background:none;border:none;color:var(--cobalt);cursor:pointer;font-size:12px;font-family:var(--mono);">View all ${all.length} claims →</button></div>`;
+    }
+    return;
+  }
+
+  const claims = all.filter(c => {
     if (state.currentFilter === 'all') return true;
     if (state.currentFilter === 'hi') return (c.confidence||0) >= 0.7;
     if (state.currentFilter === 'me') return (c.confidence||0) >= 0.35 && (c.confidence||0) < 0.7;
@@ -1169,21 +1262,16 @@ function renderClaims() {
     return true;
   });
 
-  // meta
-  const all = t.claims || [];
-  const avgConf = all.length ? all.reduce((s,c) => s + (c.confidence||0.5), 0) / all.length : 0;
-  const contraCount = all.filter(c => c.contradicts).length;
-  document.getElementById('cpMeta').innerHTML =
-    `<span class="cp-meta-i"><strong>${all.length}</strong> claims</span>
-     <span class="cp-meta-i">avg confidence <strong>${Math.round(avgConf*100)}%</strong></span>
-     ${contraCount ? `<span class="cp-meta-i" style="color:var(--vermillion)"><strong>${contraCount}</strong> contradiction${contraCount!==1?'s':''}</span>` : ''}`;
-
   if (!claims.length) {
+    const filterLabels = {hi:'High confidence',cx:'Contradictions',me:'Uncertain',lo:'Low confidence'};
+    const hint = state.currentFilter !== 'all'
+      ? `No <strong>${filterLabels[state.currentFilter]||''}</strong> claims yet.${state.currentFilter==='cx'?' Contradictions are detected automatically when you absorb new claims that conflict with existing ones.':state.currentFilter==='me'?' Medium confidence claims appear when the AI rates a finding between 35–70%.':''}`
+      : 'Ask research questions on the right and absorb the findings here.';
     list.innerHTML = `
       <div class="claims-empty">
-        <div class="claims-empty-icon">📄</div>
-        <h3>${all.length ? 'No claims match this filter' : 'No claims yet'}</h3>
-        <p>${all.length ? 'Try a different filter.' : 'Ask research questions on the right and absorb the findings here.'}</p>
+        <div class="claims-empty-icon">${state.currentFilter==='cx'?'⚠':'📄'}</div>
+        <h3>${all.length ? 'Nothing here yet' : 'No claims yet'}</h3>
+        <p>${hint}</p>
       </div>`;
     return;
   }
@@ -1216,7 +1304,12 @@ function renderClaims() {
 function filterClaims(f, el) {
   state.currentFilter = f;
   document.querySelectorAll('.f-chip').forEach(c=>c.classList.remove('on'));
-  el.classList.add('on');
+  if (el) el.classList.add('on');
+  else {
+    // called from inside kp panel "View all" link
+    const all = document.querySelector('.f-chip');
+    if (all) all.classList.add('on');
+  }
   renderClaims();
 }
 
