@@ -753,6 +753,22 @@ body::before{
 .kp-summary-gaps{margin-top:10px;padding-top:10px;border-top:1px solid var(--rule-light)}
 .kp-gaps-label{font-family:var(--mono);font-size:9px;color:var(--amber);letter-spacing:.8px;text-transform:uppercase;margin-bottom:5px}
 .kp-gaps-text{font-size:13px;color:var(--ink-3);line-height:1.6;font-style:italic}
+.kp-gaps-btn{
+  display:inline-flex;align-items:center;gap:5px;margin-top:10px;
+  font-family:var(--mono);font-size:10px;letter-spacing:.3px;
+  padding:5px 12px;border-radius:var(--r);cursor:pointer;
+  border:1px solid var(--amber);color:var(--amber);background:transparent;
+  transition:all .15s;
+}
+.kp-gaps-btn:hover{background:var(--amber);color:var(--paper)}
+.claim-ref{
+  display:inline-block;font-family:var(--mono);font-size:11px;
+  color:var(--cobalt);background:var(--cobalt-pale);
+  border:1px solid rgba(37,99,168,.2);border-radius:3px;
+  padding:0 4px;cursor:pointer;text-decoration:none;
+  transition:all .12s;vertical-align:baseline;
+}
+.claim-ref:hover{background:var(--cobalt);color:var(--paper);border-color:var(--cobalt)}
 .kp-generating{font-family:var(--mono);font-size:11px;color:var(--ink-4);font-style:italic;padding:10px 0;text-align:center}
 /* ── INTENT POPUP ── */
 .intent-overlay{
@@ -1739,7 +1755,7 @@ function renderClaims() {
         ? `<div class="kp-summary">
              <div class="kp-summary-label">Research digest</div>
              <div class="kp-summary-text">${md(t._kpSummary.overview)}</div>
-             ${t._kpSummary.gaps ? `<div class="kp-summary-gaps"><div class="kp-gaps-label">Research gaps</div><div class="kp-gaps-text">${esc(t._kpSummary.gaps)}</div></div>` : ''}
+             ${buildGapsHtml(t._kpSummary.gaps)}
            </div>`
         : `<div class="kp-summary"><div class="kp-generating" id="kpGenerating">⚡ Generating research digest…</div></div>`;
 
@@ -1747,7 +1763,8 @@ function renderClaims() {
         `<div class="kp-panel">${sections}</div>
          <div class="kp-note">Showing top items per category · <button onclick="filterClaims('all',document.querySelector('.f-chip'))" style="background:none;border:none;color:var(--cobalt);cursor:pointer;font-size:12px;font-family:var(--mono);">View all ${all.length} claims →</button></div>`;
 
-      // Generate summary if not cached
+      // Link claim number references and generate summary if needed
+      linkClaimRefs(list);
       if (!t._kpSummary) generateKpSummary();
     }
     return;
@@ -1836,6 +1853,75 @@ function filterClaims(f, el) {
 }
 
 // ── KP SUMMARY GENERATION ──
+
+// Build the gaps HTML block (shared between initial render and DOM update)
+function buildGapsHtml(gaps) {
+  if (!gaps) return '';
+  return `<div class="kp-summary-gaps">
+    <div class="kp-gaps-label">Research gaps</div>
+    <div class="kp-gaps-text">${esc(gaps)}</div>
+    <button class="kp-gaps-btn" onclick="researchGaps()">🔍 Research these gaps →</button>
+  </div>`;
+}
+
+// Link "Claim N" / "Claims N, M" references in KP digest text to actual claim cards
+function linkClaimRefs(el) {
+  if (!el) return;
+  el.querySelectorAll('.kp-summary-text, .kp-gaps-text').forEach(node => {
+    node.innerHTML = node.innerHTML.replace(
+      /\bClaims?\s+([\d,\s\-and]+)/gi,
+      (match, nums) => {
+        // Extract individual numbers
+        const ids = nums.match(/\d+/g) || [];
+        const linked = ids.map(n =>
+          `<span class="claim-ref" onclick="scrollToClaim(${parseInt(n)})" title="Jump to claim ${n}">${n}</span>`
+        ).join(', ');
+        return match.replace(nums, ' ' + linked);
+      }
+    );
+  });
+}
+
+// Scroll the claims panel to a specific claim by its 1-based index
+function scrollToClaim(n) {
+  const t = getTopic();
+  if (!t || !t.claims?.length) return;
+  const claim = t.claims[n - 1];
+  if (!claim) return;
+  // Switch to All filter so the card is visible
+  filterClaims('all', document.querySelector('.f-chip'));
+  // Give the DOM a tick to re-render, then scroll
+  setTimeout(() => {
+    const card = document.querySelector(`[data-claim-id="${claim.id}"]`);
+    if (card) {
+      card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      card.style.outline = '2px solid var(--cobalt)';
+      card.style.transition = 'outline .3s';
+      setTimeout(() => { card.style.outline = ''; }, 2000);
+    }
+  }, 80);
+}
+
+// Fire a targeted research prompt for the identified gaps
+function researchGaps() {
+  const t = getTopic();
+  if (!t?._kpSummary?.gaps) return;
+  const gaps = t._kpSummary.gaps;
+  const prompt = `The following research gaps have been identified in my knowledge base on "${t.title}":\n\n${gaps}\n\nPlease research these gaps specifically. For each gap, find the most credible evidence available (prioritising peer-reviewed sources, official statistics, and major newswires), state what can be answered with confidence and what remains genuinely uncertain, and suggest what further primary sources would best resolve each gap.`;
+  // On mobile, open the chat panel first
+  const chatPanel = document.getElementById('chatPanel');
+  if (chatPanel && window.getComputedStyle(chatPanel).display === 'none') {
+    openMobileChat();
+  }
+  const input = document.getElementById('chatInput');
+  if (input) {
+    input.value = prompt;
+    input.focus();
+    autoResize(input);
+  }
+  sendMessage(prompt);
+}
+
 async function generateKpSummary() {
   const t = getTopic();
   if (!t || !(t.claims||[]).length) return;
@@ -1890,8 +1976,9 @@ Write a concise research digest in two parts. Return ONLY valid JSON:
             block.innerHTML = `
               <div class="kp-summary-label">Research digest</div>
               <div class="kp-summary-text">${md(t._kpSummary.overview)}</div>
-              ${t._kpSummary.gaps ? `<div class="kp-summary-gaps"><div class="kp-gaps-label">Research gaps</div><div class="kp-gaps-text">${esc(t._kpSummary.gaps)}</div></div>` : ''}
+              ${buildGapsHtml(t._kpSummary.gaps)}
             `;
+            linkClaimRefs(block);
           }
         }
       }
