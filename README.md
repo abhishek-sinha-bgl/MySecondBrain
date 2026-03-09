@@ -1,192 +1,285 @@
-# MyResAssist
+# MyResAssist — Research Intelligence
 
-**Research intelligence. Knowledge you can trust.**
+> A single-file research intelligence application that runs entirely in your browser. Accumulate claims, track confidence, surface contradictions, and build a persistent knowledge base that deepens with every conversation. No installation. No account. Just an API key.
 
-[Live Demo](https://abhishek-sinha-bgl.github.io/MyResAssist/) · Single HTML file · No backend · No build tools · BYOK
-
----
-
-## What it is
-
-MyResAssist is a personal research assistant that treats knowledge as something worth keeping — and worth questioning. Unlike a chat interface where conversations disappear, MyResAssist extracts claims from every response, classifies the sources behind them, and builds a persistent knowledge base where every finding is traceable to its evidence.
-
-The unit of value is a **claim**. The measure of a claim is its **evidence chain**.
+**[Live App](https://abhishek-sinha-bgl.github.io/MyResAssist/)** · [Report a bug](https://github.com/abhishek-sinha-bgl/MyResAssist/issues)
 
 ---
 
-## The problem it solves
+## Contents
 
-A typical web search today returns SEO-optimised news stories, travel blogs, and listicles — content engineered to rank, not to inform. AI models trained on this content inherit its biases and will confidently cite weak sources. MyResAssist doesn't just surface findings; it makes the evidentiary basis of each finding visible so you can decide whether to trust it.
-
----
-
-## How it works
-
-**The Research Wall** is your home screen — a grid of topics you're actively researching, each showing its strongest finding, an average confidence level, and a flag if any claims contradict each other.
-
-**Inside a topic**, your extracted knowledge lives on the left as a list of claims. Each claim carries two independent quality signals and a full source evidence chain. The research chat is on the right — a tool you reach for to dig deeper.
-
-**After every AI response**, MyResAssist automatically extracts 2–4 key claims and presents them in an absorb panel. Before anything is saved, sources are classified through a two-pass pipeline. You choose which claims are worth keeping. If a new claim contradicts something you already know, it's flagged immediately.
-
----
-
-## Source intelligence
-
-This is the core of what makes MyResAssist different from a note-taking tool layered on top of a chat interface.
-
-### Two confidence signals per claim
-
-Every claim displays two independent scores side by side:
-
-**LLM confidence** — the model's internal certainty about the claim, calibrated during extraction against the type of sources visible in the response. A claim explicitly backed by a named government dataset or peer-reviewed study scores higher than one inferred from a travel forum.
-
-**Source quality** — derived from the actual sources retrieved, classified by authority tier. This is independent of what the model thinks. A model can be confidently wrong; source quality catches that.
-
-The two signals can diverge, and that divergence is meaningful. High LLM confidence with low source quality is a warning sign. Low LLM confidence with strong primary sources means the claim deserves more research, not dismissal.
-
-### Source authority tiers
-
-Sources are classified into four tiers using a hybrid pipeline:
-
-| Tier | Colour | What qualifies |
-|---|---|---|
-| **Primary** | 🟢 Green | Government agencies, academic institutions (`.gov`, `.edu`, `.ac.uk`), major newswires (Reuters, AP, AFP), intergovernmental bodies (WHO, UN, IMF, World Bank), peer-reviewed journals |
-| **Secondary** | 🔵 Blue | Established newspapers and broadcasters (Guardian, NYT, BBC, FT, Bloomberg, The Hindu, Al Jazeera), named industry research bodies, think tanks |
-| **Tertiary** | 🟡 Amber | Specialised or niche publications, travel and lifestyle sites, attributed blogs, forums with named contributors |
-| **Weak** | 🔴 Red | Content without a byline, SEO-optimised listicles, aggregators with no primary citations |
-
-### Hybrid classification pipeline
-
-Classification happens in two passes before any claim is saved:
-
-**Pass 1 — Rule-based (instant, free).** The source URL is matched against a pattern library covering ~40 domains and domain patterns. Known primary and secondary sources are classified in milliseconds with no API call.
-
-**Pass 2 — LLM classification for ambiguous sources.** Anything not matched by rules — niche publications, unfamiliar domains, regional outlets — is sent to a fast model (Haiku / GPT-4o-mini / Gemini Flash) in a single batch. The model returns a tier and a one-sentence reason for each source. Results are cached on the claim object so the same URL is never reclassified.
-
-### Expandable evidence drawer
-
-Every claim card has a collapsed "Sources & evidence" section. Click to expand and see:
-
-- Both confidence signals side by side with a colour-coded source quality bar
-- Each source with its tier dot, live link, classification reason, and tier badge
-- A **Find better sources** button that fires a targeted re-research query into the chat, specifically asking for primary sources to verify that claim
-- A **Remove claim** button — now contextually motivated by what you can see
-
-If you're dissatisfied with the sources, you have three options: re-research to find stronger ones, accept the claim at its rated quality, or remove it entirely.
+- [Getting Started](#getting-started)
+- [The Research Wall](#the-research-wall)
+- [The Topic View](#the-topic-view)
+- [The Chat Panel](#the-chat-panel)
+- [Absorbing Claims](#absorbing-claims)
+- [Source Intelligence](#source-intelligence)
+- [Analysing URLs & Documents](#analysing-urls--documents)
+- [Staleness & Validation](#staleness--validation)
+- [Themes](#themes)
+- [AI Provider Configuration](#ai-provider-configuration)
+- [Technical Notes](#technical-notes)
+- [Quick Reference](#quick-reference)
 
 ---
 
-## Features
+## Getting Started
 
-### Knowledge base
-- Claims persist across sessions — your research wall grows over time
-- Two independent confidence signals per claim: LLM confidence and source quality
-- Hybrid source classification: rule-based tier assignment + LLM for ambiguous cases
-- Contradiction detection — new claims are automatically checked against existing knowledge when absorbed
-- **⚡ Key Points** digest — one click shows top findings, contradictions, and uncertainties in a scannable summary panel
-- Filter claims by All / High confidence / Contradictions / Uncertain
-- Edit topic titles in place, delete or re-research individual claims
+### Prerequisites
 
-### Research
-- Full streaming responses from Claude, OpenAI, Gemini, or any OpenAI-compatible provider
-- Web search toggle — live results via Anthropic (Claude), Google (Gemini), or provider default
-- **Research Deeper** — structured multi-angle deep dive: core findings, supporting evidence, counterarguments, implications, and further angles
-- **Summarise** — concise executive brief of the current session against your existing claims
-- Follow-up question suggestions after each response
-- Export topic to Markdown (claims + full conversation)
+- An API key from one of: **Anthropic (Claude)**, **OpenAI**, **Google (Gemini)**, or any OpenAI-compatible custom provider (Groq, Together, Ollama, etc.)
+- A modern browser — Chrome, Edge, Firefox, or Safari. No server, no build step.
+- **Recommended:** Claude with web search enabled. PDF analysis and web search integration work best with Claude.
 
-### Themes
-Four built-in themes, switchable live from Settings with no reload required. Your choice persists across sessions.
+### First Launch
+
+1. Open `index.html` in your browser (or visit the [live app](https://abhishek-sinha-bgl.github.io/MyResAssist/))
+2. Click **Settings** (top right) and enter your API key
+3. Select your provider tab (Claude / OpenAI / Gemini / Custom) and confirm the model
+4. Toggle **Web Search** on if you want live internet access during research
+5. Click **Save** and close Settings
+6. Click **+ New Topic** to begin
+
+---
+
+## The Research Wall
+
+Your home screen — a grid of all research topics. Each card shows the topic title, a top claim preview, claim count, and an average confidence bar.
+
+### Topic Cards
+
+| Action | How |
+|--------|-----|
+| **Create** | Click the dashed "New Research Topic" card |
+| **Open** | Click any card |
+| **Menu (⋯)** | Hover a card to reveal options: Archive or Delete |
+| **Archive** | Moves the topic to a collapsible "Archived (N)" section at the bottom |
+| **Delete** | Removes immediately with a 6-second undo window |
+| **Restore** | Expand archived section → card menu → Restore |
+
+### Search
+
+The search bar below the wall header searches across **all topic titles, claim text, and claim rationale** simultaneously. Results are grouped by topic with matches highlighted. Click any result to jump directly into that topic.
+
+### Export & Import Backup
+
+- **Export:** Settings → Data → ↓ Export backup. Downloads a JSON file with all topics, claims, source classifications, and archived state.
+- **Import:** Settings → Data → ↑ Import backup. Merges new topics from a backup file. Topics already present (by ID) are not duplicated.
+
+> **Storage note:** `localStorage` is capped at ~5 MB per browser origin. Typical usage (20–30 topics, 30 claims each) uses ~500–800 KB. Export backups periodically if you research intensively.
+
+---
+
+## The Topic View
+
+Opening a topic splits the screen into two panels: **Claims** (left) and **Chat** (right). On mobile, a floating button opens the chat as a full-screen overlay.
+
+### Claims Panel
+
+Each claim card shows:
+- Claim text and confidence classification (High / Medium / Low / Contradicted)
+- A "Why it matters" rationale
+- An age indicator for claims older than 30 days
+- **Sources & evidence drawer** — click to expand for dual confidence display, source authority tier badges, and action buttons
+
+### Filter Chips
+
+| Chip | Shows |
+|------|-------|
+| **All** | All claims in insertion or sort order |
+| **High confidence** | Claims rated ≥70% confidence |
+| **Contradictions** | Claims that contradict a previously absorbed claim (detected automatically) |
+| **Uncertain** | Claims rated <35% confidence — anecdotal, forum-sourced, or model inference |
+| **⚡ Key Points** | AI-generated digest (see below) |
+
+### ⚡ Key Points Digest
+
+The Key Points panel opens with an **AI-generated research digest**: a paragraph summarising what is well-established, what is contested, and what the overall picture suggests — followed by a **Research gaps** note identifying what is missing, weakly sourced, or unresolved. Below the digest, claims are grouped into: Strongest findings / Supporting / Contradictions / Uncertain.
+
+The digest is generated once and cached per topic. It is automatically invalidated when new claims are absorbed.
+
+### Sort
+
+The **Sort** dropdown (top right of the toolbar) orders claims by:
+- **Newest** — default insertion order
+- **Highest confidence** — best-supported claims first
+- **Lowest confidence** — use this to identify where to focus next
+
+### Staleness Banner
+
+If any claim is older than 30 days, an amber banner appears above the claim list. Click **↺ Validate claims** to fire a targeted query asking the AI whether those specific claims are still accurate. Claims are marked as validated and the banner clears.
+
+---
+
+## The Chat Panel
+
+Each conversation is per-session — closing and reopening a topic starts a fresh chat, though all absorbed claims persist.
+
+### Input
+
+| Element | Function |
+|---------|----------|
+| Text input | Type a research question and press Enter |
+| **URL detection** | Paste a URL alone and press Enter → intent popup appears |
+| **📎 Attach button** | Open a file picker for PDF, TXT, or MD files |
+| **Drag and drop** | Drag any supported file onto the chat panel |
+| **🎙 Voice** | Click to dictate your question |
+| **Web search toggle** | Enable live internet access via the AI's built-in search tool |
+
+### Chat Bubble Actions
+
+Every AI response has an action bar (hover on desktop, always visible on mobile):
+
+| Button | Action |
+|--------|--------|
+| **Copy** | Clean plain text — all markdown stripped |
+| **Copy MD** | Raw markdown, suitable for Notion, Obsidian, etc. |
+| **↗ Share** | Native OS share sheet on mobile (WhatsApp, Mail, Notes, OneNote…). Falls back to clipboard copy on desktop. |
+
+### Research Action Buttons
+
+| Button | Action |
+|--------|--------|
+| 🔬 **Research Deeper** | Multi-angle deep research: core findings, supporting evidence, counterarguments, key implications, further angles. Activates after the first message. |
+| 📋 **Summarise** | Executive summary of the session: summary paragraph, key findings as bullets, what remains uncertain. |
+| ↓ **Export** | Downloads topic claims + conversation as **Plain text (.txt)** or **Markdown (.md)**. |
+
+---
+
+## Absorbing Claims
+
+After each AI response, MyResAssist automatically extracts **2–4 key factual claims** and presents them in an Absorb panel below the response. Each proposed claim shows:
+
+- The claim text and confidence rating
+- A "Why it matters" rationale
+- Source citations classified by authority tier
+
+Use the checkboxes to select which claims to keep, then click **Save selected claims**. Contradictions with existing claims are detected automatically.
+
+> The claim extractor reads up to **6,000 characters** of the AI response, ensuring comprehensive extraction even from detailed URL or document analyses.
+
+---
+
+## Source Intelligence
+
+Every claim has two independent confidence signals displayed in the sources drawer:
+
+| Signal | Description |
+|--------|-------------|
+| **LLM Confidence** | The model's internal certainty, calibrated against the types of sources it cited |
+| **Source Quality** | A weighted score derived from the actual authority tiers of cited sources, independent of model opinion |
+
+### Source Authority Tiers
+
+| Tier | Sources |
+|------|---------|
+| 🟢 **Primary** | `.gov`, `.edu`, `.ac.uk`, Reuters, AP, AFP, WHO, UN, IMF, World Bank, peer-reviewed journals |
+| 🔵 **Secondary** | Guardian, NYT, BBC, FT, Bloomberg, The Hindu, Al Jazeera, major think tanks |
+| 🟡 **Tertiary** | Niche or lifestyle sites, attributed blogs, specialist forums |
+| 🔴 **Weak** | No byline, SEO listicles, aggregators without primary citations |
+
+Sources are classified first by a fast rule-based engine (~40 domain patterns), then ambiguous cases by a lightweight AI call. Results are cached — the same URL is never reclassified twice.
+
+### Find Better Sources
+
+Each claim's sources drawer has a **↺ Find better sources** button. This fires a targeted query instructing the AI to prioritise: peer-reviewed sources → government/official statistics → major newswires (Reuters, AP, AFP, Bloomberg) → established quality outlets, and to flag if a claim only has lower-tier backing.
+
+---
+
+## Analysing URLs & Documents
+
+### URL Analysis
+
+1. Paste a URL **by itself** into the chat input and press Enter
+2. An intent popup appears with four options:
+
+| Option | Does |
+|--------|------|
+| 📋 **Summarise** | Extract key points and the main argument |
+| 🔍 **Extract & validate claims** | Pull out factual claims and assess credibility |
+| ⚖ **Find counter-arguments** | Identify what challenges or contradicts the content |
+| ⚡ **Full analysis** | All three combined |
+
+> URL retrieval depends on your AI provider's web access capability. Best results with Claude (web search enabled). Other providers may not retrieve all pages.
+
+### PDF & Document Analysis
+
+- Click the **📎 attach button** or **drag a file** onto the chat panel
+- Accepts `.pdf`, `.txt`, and `.md` files
+- The same intent popup appears — choose your analysis mode
+
+> PDF analysis works natively with Claude (document sent directly to the API). For other providers, text content is extracted and sent as a prompt — results may vary.
+
+---
+
+## Staleness & Validation
+
+Research on fast-moving topics can become outdated. MyResAssist tracks claim age and surfaces drift.
+
+- **Age indicator** — claims older than 30 days show their age in the card header
+- **Staleness banner** — amber banner appears when stale claims exist
+- **↺ Validate claims** — fires a query for up to 5 stale claims asking whether each is still accurate, has changed, or needs updating. If the AI surfaces updates, absorb the revised claims to replace the old ones.
+
+---
+
+## Themes
+
+Four visual themes under **Settings → Appearance**:
 
 | Theme | Character |
-|---|---|
-| **Parchment** | Warm cream paper, charcoal ink, Lora serif. Editorial and readable — the default. |
-| **Obsidian** | Near-black with electric cyan accents, Outfit typeface. Dark mode with precision energy. |
-| **Slate & Bone** | Cool off-white, blue-grey ink, IBM Plex Mono display. Clinical, architectural, low noise. |
-| **Forest Codex** | Deep forest green, aged gold accents, Crimson Pro italic. The richest and most distinctive. |
-
-### Providers
-- Claude (Anthropic) — with web search support
-- OpenAI — with streaming
-- Google Gemini — with Google Search grounding
-- Any OpenAI-compatible provider: Groq, Mistral, Together AI, Ollama, LM Studio, Perplexity
-- Custom providers: live model fetch from `/v1/models`, dropdown selection, edit/update saved providers
-
-### Voice
-- Voice input via Web Speech API (Chrome and Safari on Android/iOS)
-- Hands-free: speak your question, response streams automatically
-
-### Mobile
-- Responsive layout — claims panel full-screen on mobile
-- Chat opens as a slide-up panel via a floating button
-- Non-streaming API calls on mobile for reliable CORS handling with custom providers
+|-------|-----------|
+| **Parchment** *(default)* | Warm cream background, charcoal ink, Lora serif headings |
+| **Obsidian** | Near-black background, electric cyan accents, Outfit sans headings |
+| **Slate & Bone** | Cool off-white, blue-grey tones, IBM Plex Mono headings |
+| **Forest Codex** | Deep green background, aged gold accents, Crimson Pro italic headings |
 
 ---
 
-## Getting started
+## AI Provider Configuration
 
-1. Open the [live demo](https://abhishek-sinha-bgl.github.io/MyResAssist/) or host `index.html` anywhere static
-2. Click **Configure API key** in the top bar
-3. Select your provider, enter your API key, choose a model, and save
-4. Optionally pick a theme from the Appearance row at the top of Settings
-5. Create your first research topic from the wall
-6. Ask a question — absorb the findings — expand any claim to inspect its evidence chain
+All keys are stored locally in your browser only — never sent anywhere except the provider's own API.
 
-Your API keys and all research data are stored in your browser's localStorage. Nothing leaves your device except the API calls you make directly to your chosen provider.
+| Provider | Recommended model | Notes |
+|----------|------------------|-------|
+| **Claude** | `claude-sonnet-4-6` | Best overall. Native PDF support, streaming, web search. [Get key](https://console.anthropic.com) |
+| **OpenAI** | `gpt-4o` | Full streaming. [Get key](https://platform.openai.com) |
+| **Gemini** | `gemini-2.0-flash` | Google Search grounding. [Get key](https://aistudio.google.com) |
+| **Custom** | Any OpenAI-compatible | Groq, Together, Ollama, etc. Enter endpoint, key, and model. Supports auto-fetch of available models. |
 
----
-
-## Understanding the confidence signals
-
-**Why two signals?** Because they measure different things.
-
-The LLM confidence score reflects how strongly the language model believes a claim is supported by the content it processed — but models are trained on the same SEO-saturated web that search engines index. A confidently stated claim from a travel blog is still just a travel blog.
-
-The source quality score is grounded in the actual provenance of the sources retrieved. It doesn't care how confident the model sounds. It asks: what kind of outlet produced this, and how authoritative is it?
-
-Used together, they let you make better decisions about which findings to act on and which to investigate further.
-
-**A note on limitations.** Source classification is not infallible. A reputable domain can publish a poorly sourced article. An obscure journal can publish the most important paper in a field. Classification is a heuristic, not a verdict. Use it to prioritise your scrutiny, not to replace it.
+> **OSS / large model compatibility:** MyResAssist uses a robust five-step JSON parser that handles reasoning preambles, `<think>` tags, flat arrays, nested objects, and field-name aliases — compatible with any OpenAI-format endpoint.
 
 ---
 
-## Deployment
+## Technical Notes
 
-This is a single `index.html` file. Drop it anywhere that serves static files:
-
-- **GitHub Pages** — push to your repo, enable Pages, done
-- **Netlify / Vercel** — drag and drop
-- **Local** — open the file directly in your browser
-
-No server, no database, no accounts.
+- **Single file** — the entire application is one HTML file (~120 KB). No dependencies, no build step, no server.
+- **Storage** — all data stored in `localStorage` under `myresassist_v1`. Nothing leaves your device except API calls to your provider.
+- **API calls** — made directly from the browser. Keys are never proxied through any intermediary.
+- **Offline** — the UI loads offline. Sending messages requires an internet connection.
+- **Data model** — topics contain claims; claims contain text, confidence, rationale, source citations with tier classifications, and timestamps. Exported backups are plain JSON.
 
 ---
 
-## API key setup
+## Quick Reference
 
-| Provider | Where to get a key |
-|---|---|
-| Claude | [console.anthropic.com](https://console.anthropic.com) |
-| OpenAI | [platform.openai.com](https://platform.openai.com) |
-| Gemini | [aistudio.google.com](https://aistudio.google.com) |
-| Groq | [console.groq.com](https://console.groq.com) |
-| Mistral | [console.mistral.ai](https://console.mistral.ai) |
-
-For Groq, the correct endpoint is `https://api.groq.com/openai/v1/chat/completions`. After entering the endpoint and key, click **Fetch models** to populate the model dropdown automatically.
-
----
-
-## Roadmap
-
-- Multi-step deep research with sequential independent searches
-- URL and document analysis — paste a link or attach a PDF, have claims extracted with full source attribution
-- Cross-device session sync via shareable URL or GitHub Gist
-- Search within your knowledge base across topics
-- Claim relationship mapping — visual graph of supporting and contradicting claims
-- Source quality trends — track whether a topic's evidence base is strengthening or weakening as research deepens
+| Task | How |
+|------|-----|
+| Create a topic | Dashed card on the Research Wall |
+| Search all research | Search bar below wall header |
+| Archive a topic | Hover card → ⋯ → Archive |
+| Analyse a URL | Paste URL alone in chat → Enter → choose intent |
+| Analyse a PDF | Click 📎 or drag onto chat panel → choose intent |
+| Copy an AI response | Hover response → Copy |
+| Share a response | Hover response → ↗ Share |
+| Find better sources | Open claim drawer → ↺ Find better sources |
+| Validate old claims | Amber banner → ↺ Validate claims |
+| See research digest | Filter chips → ⚡ Key Points |
+| Sort claims | Sort dropdown → Newest / Highest / Lowest |
+| Export topic | ↓ Export → Plain text or Markdown |
+| Back up all data | Settings → Data → ↓ Export backup |
+| Restore a backup | Settings → Data → ↑ Import backup |
+| Change theme | Settings → Appearance |
 
 ---
 
-## Built with
-
-No frameworks, no bundler, no dependencies. Fonts via Google Fonts: Lora and Source Sans 3 (Parchment), Outfit and IBM Plex Mono (Obsidian), IBM Plex Mono (Slate), Crimson Pro (Forest). Everything else is vanilla HTML, CSS, and JavaScript.
+*MyResAssist — open `index.html` and start researching.*
