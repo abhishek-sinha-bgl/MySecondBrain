@@ -636,6 +636,24 @@ body::before{
 .m-a h3{font-family:var(--serif);font-size:15px;margin:10px 0 5px;color:var(--ink)}
 .m-a ul{padding-left:18px;margin:6px 0}
 .m-a li{margin-bottom:3px}
+/* ── BUBBLE ACTION BAR ── */
+.bubble-wrap{display:flex;flex-direction:column;gap:0}
+.bubble-acts{
+  display:flex;gap:5px;margin-top:5px;opacity:0;
+  transition:opacity .18s;align-items:center;
+}
+.bubble-wrap:hover .bubble-acts{opacity:1}
+@media(max-width:700px){.bubble-acts{opacity:1}} /* always visible on mobile */
+.bact{
+  font-family:var(--mono);font-size:10px;padding:3px 9px;
+  border:1px solid var(--rule);border-radius:var(--r);
+  background:var(--paper-card);color:var(--ink-4);
+  cursor:pointer;transition:all .15s;letter-spacing:.2px;
+}
+.bact:hover{border-color:var(--cobalt);color:var(--cobalt);background:var(--cobalt-pale)}
+.bact.share{border-color:rgba(37,99,168,.3);color:var(--cobalt);background:var(--cobalt-pale)}
+.bact.share:hover{background:var(--cobalt);color:var(--paper)}
+.bact.copied{border-color:var(--forest);color:var(--forest);background:rgba(45,106,79,.08)}
 .m-meta{
   font-family:var(--mono);font-size:10px;color:var(--ink-5);
   margin-top:6px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;
@@ -2495,11 +2513,87 @@ function finaliseStreamBubble(text, citations) {
   }
   const time = new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
   b.innerHTML = html + srcsHtml;
-  // meta row
+
+  // ── Bubble action bar ──
+  const plainText = text; // keep raw markdown text for copy/share
+  const hasShare = !!navigator.share;
+
+  const acts = document.createElement('div');
+  acts.className = 'bubble-acts';
+
+  // Copy plain text
+  const copyBtn = document.createElement('button');
+  copyBtn.className = 'bact';
+  copyBtn.textContent = 'Copy';
+  copyBtn.onclick = () => {
+    // Strip markdown to plain text
+    const plain = text
+      .replace(/\*\*(.*?)\*\*/g,'$1')
+      .replace(/\*(.*?)\*/g,'$1')
+      .replace(/#{1,6}\s+/g,'')
+      .replace(/`{1,3}[^`]*`{1,3}/g, s => s.replace(/`/g,''))
+      .replace(/\[([^\]]+)\]\([^)]+\)/g,'$1')
+      .trim();
+    navigator.clipboard?.writeText(plain).then(() => {
+      copyBtn.textContent = '✓ Copied';
+      copyBtn.classList.add('copied');
+      setTimeout(() => { copyBtn.textContent = 'Copy'; copyBtn.classList.remove('copied'); }, 2000);
+    }).catch(() => toast('Copy failed','err'));
+  };
+  acts.appendChild(copyBtn);
+
+  // Copy as Markdown
+  const mdBtn = document.createElement('button');
+  mdBtn.className = 'bact';
+  mdBtn.textContent = 'Copy MD';
+  mdBtn.onclick = () => {
+    navigator.clipboard?.writeText(text).then(() => {
+      mdBtn.textContent = '✓ Copied';
+      mdBtn.classList.add('copied');
+      setTimeout(() => { mdBtn.textContent = 'Copy MD'; mdBtn.classList.remove('copied'); }, 2000);
+    }).catch(() => toast('Copy failed','err'));
+  };
+  acts.appendChild(mdBtn);
+
+  // Share (native OS share sheet on mobile; fallback to copy on desktop)
+  const shareBtn = document.createElement('button');
+  shareBtn.className = 'bact share';
+  shareBtn.textContent = hasShare ? '↗ Share' : '↗ Share';
+  shareBtn.onclick = async () => {
+    const topic = getTopic()?.title || 'MyResAssist';
+    const shareText = text
+      .replace(/\*\*(.*?)\*\*/g,'$1')
+      .replace(/\*(.*?)\*/g,'$1')
+      .replace(/#{1,6}\s+/g,'')
+      .trim();
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: topic, text: shareText });
+      } catch(e) { /* user cancelled */ }
+    } else {
+      // Desktop fallback — copy to clipboard
+      navigator.clipboard?.writeText(shareText).then(() => {
+        shareBtn.textContent = '✓ Copied for sharing';
+        shareBtn.classList.add('copied');
+        setTimeout(() => { shareBtn.textContent = '↗ Share'; shareBtn.classList.remove('copied'); }, 2500);
+      });
+    }
+  };
+  acts.appendChild(shareBtn);
+
+  // Wrap bubble + acts together so hover works
+  const wrap = document.createElement('div');
+  wrap.className = 'bubble-wrap';
+  b.parentNode.insertBefore(wrap, b);
+  wrap.appendChild(b);
+  wrap.appendChild(acts);
+
+  // meta row (outside wrap, below)
   const meta = document.createElement('div');
   meta.className = 'm-meta';
   meta.innerHTML = `MyResAssist · ${time}`;
-  b.parentNode.insertBefore(meta, b.nextSibling);
+  wrap.parentNode.insertBefore(meta, wrap.nextSibling);
+
   scrollChat();
 }
 
@@ -2910,7 +3004,7 @@ async function extractClaims(query, response, citations) {
   const prompt = `Extract 2-4 key factual claims from this research exchange.
 
 Query: "${query}"
-Response: ${response.substring(0,2500)}
+Response: ${response.substring(0,6000)}
 ${existing ? `\nExisting claims:\n${existing}` : ''}
 
 Output a JSON object with this exact structure — no other text, no markdown:
@@ -3089,7 +3183,9 @@ Format: executive summary paragraph, then "Key findings:" as bullets, then "Stil
 function doExport() {
   const t = getTopic();
   if (!t) return;
-  const lines = [
+
+  // Build content
+  const mdLines = [
     `# ${t.title}`,
     `*Exported from MyResAssist — ${new Date().toLocaleDateString()}*`,
     '',
@@ -3103,12 +3199,71 @@ function doExport() {
     '',
     ...state.messages.map(m => `**${m.role === 'user' ? 'You' : 'MyResAssist'}:** ${m.content}`),
   ];
-  const blob = new Blob([lines.join('\n')], {type:'text/markdown'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href=url; a.download=`${t.title.replace(/[^a-z0-9]/gi,'-').toLowerCase()}-${Date.now()}.md`;
-  a.click(); URL.revokeObjectURL(url);
-  toast('Exported as Markdown');
+
+  const txtLines = [
+    t.title.toUpperCase(),
+    `Exported from MyResAssist — ${new Date().toLocaleDateString()}`,
+    '='.repeat(60),
+    '',
+    `CLAIMS (${(t.claims||[]).length})`,
+    '-'.repeat(40),
+    ...(t.claims||[]).map((c,i) => [
+      `${i+1}. ${c.text}`,
+      `   Confidence: ${Math.round((c.confidence||0)*100)}%`,
+      c.why ? `   Why it matters: ${c.why}` : '',
+      c.contradicts ? `   Contradicts: ${c.contradicts}` : '',
+      '',
+    ].filter(l => l !== null).join('\n')),
+    '',
+    'RESEARCH CONVERSATION',
+    '-'.repeat(40),
+    '',
+    ...state.messages.map(m =>
+      `${m.role === 'user' ? 'YOU' : 'MYRESASSIST'}:\n${m.content
+        .replace(/\*\*(.*?)\*\*/g,'$1')
+        .replace(/\*(.*?)\*/g,'$1')
+        .replace(/#{1,6}\s+/g,'')}\n`
+    ),
+  ];
+
+  const slug = t.title.replace(/[^a-z0-9]/gi,'-').toLowerCase();
+
+  // Show format picker
+  const existing = document.getElementById('exportPicker');
+  if (existing) { existing.remove(); return; }
+
+  const picker = document.createElement('div');
+  picker.id = 'exportPicker';
+  picker.style.cssText = 'position:fixed;bottom:70px;right:20px;z-index:5000;background:var(--paper-card);border:1px solid var(--rule);border-radius:var(--rl);box-shadow:var(--shadow-lg);padding:8px;display:flex;flex-direction:column;gap:4px;min-width:160px;animation:ms .15s ease;';
+
+  const opts = [
+    { label: '↓ Plain text (.txt)', ext: 'txt', content: txtLines.join('\n'), type: 'text/plain' },
+    { label: '↓ Markdown (.md)', ext: 'md', content: mdLines.join('\n'), type: 'text/markdown' },
+  ];
+
+  opts.forEach(o => {
+    const btn = document.createElement('button');
+    btn.style.cssText = 'font-family:var(--mono);font-size:11px;padding:8px 12px;border:1px solid var(--rule);border-radius:var(--r);background:var(--paper-deep);color:var(--ink-3);cursor:pointer;text-align:left;transition:all .15s;';
+    btn.textContent = o.label;
+    btn.onmouseenter = () => { btn.style.borderColor='var(--cobalt)'; btn.style.color='var(--cobalt)'; };
+    btn.onmouseleave = () => { btn.style.borderColor='var(--rule)'; btn.style.color='var(--ink-3)'; };
+    btn.onclick = () => {
+      const blob = new Blob([o.content], {type: o.type});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `${slug}-${Date.now()}.${o.ext}`;
+      a.click(); URL.revokeObjectURL(url);
+      picker.remove();
+      toast(`Exported as .${o.ext}`);
+    };
+    picker.appendChild(btn);
+  });
+
+  document.body.appendChild(picker);
+  // close on outside click
+  setTimeout(() => document.addEventListener('click', function h(e) {
+    if (!picker.contains(e.target)) { picker.remove(); document.removeEventListener('click', h); }
+  }), 50);
 }
 
 // ── WEB TOGGLE ──
