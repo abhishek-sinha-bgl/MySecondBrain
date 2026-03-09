@@ -2203,13 +2203,14 @@ async function sendPdfMessage(instruction, fileData, fileName, mediaType) {
     }
 
     hideThinking();
-    finaliseStreamBubble(reply.text, reply.citations||[]);
+    const mergedCitsPdf = mergeCitations(reply.text, reply.citations||[]);
+    finaliseStreamBubble(reply.text, mergedCitsPdf);
     state.messages.push({ role:'user', content:`[Document: ${fileName}] ${instruction}` });
     state.messages.push({ role:'assistant', content: reply.text });
     enableResearchBtns();
 
-    const absorb = await extractClaims(instruction, reply.text, reply.citations||[]);
-    if (absorb?.length) appendAbsorbPanel(absorb, reply.citations||[]);
+    const absorb = await extractClaims(instruction, reply.text, mergedCitsPdf);
+    if (absorb?.length) appendAbsorbPanel(absorb, mergedCitsPdf);
   } catch(e) {
     hideThinking();
     const msgs = document.getElementById('chatMsgs');
@@ -2354,12 +2355,127 @@ function sourceQualityScore(sources) {
   return Math.min(1, sum / Math.max(sources.length, 1));
 }
 
+// ── INLINE CITATION EXTRACTION ──
+// Parses reference-style footnotes that OSS models emit:
+//   [1] Bloomberg - "Title" (Date)
+//   [1] Bloomberg: Title, Date
+//   [N] Publisher — Title (Year)
+//   **[1]** Bloomberg - ...   (bold markers)
+//   [1]: Bloomberg - ...      (markdown link-ref style)
+//      [1] Bloomberg - ...    (tab/space indented)
+// Returns an array of {url, title, publisher} objects.
+function extractInlineCitations(text) {
+  if (!text) return [];
+  const results = [];
+  const seen = new Set();
+
+  // Normalise: strip bold markers around reference numbers, and handle [N]: format
+  // Also handles tab/space indented reference lines
+  const normalised = text
+    .replace(/\*{1,2}\[(\d+)\]\*{1,2}/g, '[$1]')   // **[1]** → [1]
+    .replace(/^([ \t]*)\[(\d+)\]:\s*/gm, '$1[$2] '); // [1]: Publisher → [1] Publisher
+
+  // Grab each [N] reference line (allow leading whitespace for indented lists)
+  // then parse publisher + title.
+  const linePattern = /^[ \t]*\[(\d+)\]\s+(.+)$/gm;
+  let m;
+  while ((m = linePattern.exec(normalised)) !== null) {
+    const idx = m[1];
+    const rest = m[2].trim();
+
+    // Split on first separator to isolate publisher
+    const sepMatch = rest.match(/^([^:\-\u2014\u2013\n]+?)(?:\s*[-:\u2014\u2013]+\s*)(.*)$/);
+    if (!sepMatch) continue;
+
+    const publisher = sepMatch[1].trim().replace(/[*_[\]]/g, '');
+    let remainder = sepMatch[2].trim();
+
+    if (!publisher || publisher.length < 2) continue;
+    // Skip numbered list items that aren't references (methodology steps, search results)
+    if (/^(search|result|step|peer|government|major|established|no\s|primary|secondary)/i.test(publisher)) continue;
+
+    // Extract title — quoted (straight or curly) or unquoted
+    let title = '';
+    let date = '';
+    const quotedMatch = remainder.match(/^["\u201c\u201d\u0022]([^"\u201c\u201d\u0022\n]+)["\u201c\u201d\u0022]/);
+    if (quotedMatch) {
+      title = quotedMatch[1].trim();
+      const afterTitle = remainder.slice(quotedMatch[0].length).trim();
+      const dateMatch = afterTitle.match(/^\s*[-\u2014\u2013]?\s*\(([^)]+)\)/);
+      if (dateMatch) date = dateMatch[1].trim();
+    } else {
+      // Unquoted: take up to ( or end, strip trailing annotation
+      const unquoted = remainder.match(/^([^(\n]+?)(?:\s*\(([^)]+)\))?(?:\s*[-\u2014\u2013].*)?$/);
+      if (unquoted) {
+        title = unquoted[1].trim();
+        date = (unquoted[2] || '').trim();
+      }
+    }
+    // Strip trailing annotations like "- No direct link provided" or "- Flags: ..."
+    title = title.replace(/\s*[-\u2014\u2013]\s*(No direct|Flag|Note|See|Rel|Source).*/i, '').trim();
+
+    const key = publisher.toLowerCase() + '|' + (title || idx);
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    const displayTitle = [title, date].filter(Boolean).join(' \u2014 ') || publisher;
+    // Synthetic URL so the source object passes through the pipeline.
+    // classifyByRules falls through to classifyPublisherName for inline-citation:// scheme.
+    results.push({
+      url: `inline-citation://${publisher.toLowerCase().replace(/\s+/g, '-')}/${idx}`,
+      title: displayTitle,
+      publisher,
+      inlineCitation: true,
+    });
+  }
+  return results;
+}
+
+// Publisher-name → tier lookup for inline citations
+const PUBLISHER_TIER = {
+  // Primary / newswires
+  reuters: 'primary', 'associated press': 'primary', 'ap ': 'primary', ' ap': 'primary',
+  afp: 'primary', bloomberg: 'primary',
+  'world bank': 'primary', imf: 'primary', 'international monetary fund': 'primary',
+  'world health organization': 'primary', who: 'primary',
+  'united nations': 'primary', 'u.s. census': 'primary', 'bureau of economic': 'primary',
+  'national science': 'primary', ieee: 'primary', acm: 'primary', jstor: 'primary',
+  'mit technology review': 'secondary', 'financial times': 'secondary',
+  ft: 'secondary', 'new york times': 'secondary', nyt: 'secondary',
+  'washington post': 'secondary', 'the guardian': 'secondary', guardian: 'secondary',
+  bbc: 'secondary', economist: 'secondary', wsj: 'secondary',
+  'wall street journal': 'secondary', axios: 'secondary', politico: 'secondary',
+  forbes: 'secondary', fortune: 'secondary', wired: 'secondary',
+  techcrunch: 'secondary', 'the verge': 'secondary', ars: 'secondary',
+  'ars technica': 'secondary', 'south china morning': 'secondary',
+  'the hindu': 'secondary', 'hindustan times': 'secondary',
+  // Tertiary / market research
+  gartner: 'tertiary', idc: 'tertiary', globaldata: 'tertiary',
+  mckinsey: 'tertiary', 'boston consulting': 'tertiary', bcg: 'tertiary',
+  deloitte: 'tertiary', pwc: 'tertiary', accenture: 'tertiary',
+};
+
+function classifyPublisherName(publisher) {
+  if (!publisher) return null;
+  const lc = publisher.toLowerCase();
+  for (const [key, tier] of Object.entries(PUBLISHER_TIER)) {
+    if (lc.includes(key)) return tier;
+  }
+  return null;
+}
+
 async function classifySourcesForClaim(sources) {
   if (!sources?.length) return sources;
   const toClassify = [];
 
   // Step 1: rule-based pass
   const classified = sources.map(src => {
+    // Inline citations (no real URL) — classify by publisher name
+    if (src.inlineCitation) {
+      const tier = classifyPublisherName(src.publisher) || 'secondary';
+      const reason = `Cited by name as "${src.publisher}" — no direct URL provided`;
+      return { ...src, tier, reason };
+    }
     if (_srcCache[src.url]) return { ...src, ..._srcCache[src.url] };
     const tier = classifyByRules(src.url);
     if (tier) {
@@ -2487,8 +2603,10 @@ function updateClaimDrawer(card, claim) {
         <div class="src-row">
           <div class="src-tier ${s.tier||'unknown'}"></div>
           <div class="src-body">
-            <a class="src-link" href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title||s.url)}</a>
-            <div class="src-meta">${esc(s.reason||SOURCE_TIER_META[s.tier||'unknown']?.desc||'')}</div>
+            ${s.inlineCitation
+              ? `<span class="src-link" style="cursor:default">${esc(s.title||s.publisher||s.url)}</span>`
+              : `<a class="src-link" href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title||s.url)}</a>`}
+            <div class="src-meta">${esc(s.reason||SOURCE_TIER_META[s.tier||'unknown']?.desc||'')}${s.inlineCitation ? ' · No direct URL — cited by name' : ''}</div>
           </div>
           <span class="src-tier-badge ${s.tier||'unknown'}">${SOURCE_TIER_META[s.tier||'unknown']?.label||'Unknown'}</span>
         </div>`).join('')
@@ -2642,6 +2760,16 @@ function updateStreamBubble(text) {
   b.innerHTML = html + '<span class="cursor"></span>';
   scrollChat();
 }
+// Merge provider URL citations with inline reference citations parsed from response text.
+// URL citations take precedence; inline ones fill the gap when the provider returned none.
+function mergeCitations(text, urlCitations) {
+  const urlCits = urlCitations || [];
+  // Only extract inline if provider gave no URL citations (custom/OSS models)
+  if (urlCits.length > 0) return urlCits;
+  const inline = extractInlineCitations(text);
+  return inline.length ? inline : urlCits;
+}
+
 function finaliseStreamBubble(text, citations) {
   const b = document.getElementById('streamBubble');
   if (!b) return;
@@ -2650,7 +2778,7 @@ function finaliseStreamBubble(text, citations) {
   if (!html.startsWith('<')) html = '<p>' + html + '</p>';
   let srcsHtml = '';
   if (citations?.length) {
-    srcsHtml = `<div class="m-srcs">${citations.map((c,i)=>`<div class="m-src-l"><sup>${i+1}</sup> <a href="${esc(c.url)}" target="_blank" rel="noopener">${esc(c.title||c.url)}</a></div>`).join('')}</div>`;
+    srcsHtml = `<div class="m-srcs">${citations.map((c,i)=>`<div class="m-src-l"><sup>${i+1}</sup> ${c.inlineCitation ? `<span style="color:var(--ink-3)">${esc(c.title||c.publisher)}</span>` : `<a href="${esc(c.url)}" target="_blank" rel="noopener">${esc(c.title||c.url)}</a>`}</div>`).join('')}</div>`;
   }
   const time = new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
   b.innerHTML = html + srcsHtml;
@@ -2791,13 +2919,14 @@ async function sendMessage(overrideText) {
   try {
     const reply = await callAI(state.messages);
     hideThinking();
-    finaliseStreamBubble(reply.text, reply.citations);
+    const mergedCits = mergeCitations(reply.text, reply.citations);
+    finaliseStreamBubble(reply.text, mergedCits);
     state.messages.push({ role:'assistant', content: reply.text });
     enableResearchBtns();
 
     // auto-extract claims
-    const absorb = await extractClaims(text, reply.text, reply.citations);
-    if (absorb?.length) appendAbsorbPanel(absorb, reply.citations || []);
+    const absorb = await extractClaims(text, reply.text, mergedCits);
+    if (absorb?.length) appendAbsorbPanel(absorb, mergedCits);
 
     // follow-ups
     const fups = await getFollowUps(text, reply.text);
@@ -3280,11 +3409,12 @@ Be comprehensive. Cite sources where known.`;
     hideThinking();
     clearInterval(interval);
     advanceStep(steps.length-1);
-    finaliseStreamBubble(reply.text, reply.citations);
+    const mergedCitsDeep = mergeCitations(reply.text, reply.citations);
+    finaliseStreamBubble(reply.text, mergedCitsDeep);
     state.messages.push({role:'user',content:deepPrompt});
     state.messages.push({role:'assistant',content:reply.text});
-    const claims = await extractClaims(deepPrompt, reply.text, reply.citations);
-    if (claims?.length) appendAbsorbPanel(claims, reply.citations||[]);
+    const claims = await extractClaims(deepPrompt, reply.text, mergedCitsDeep);
+    if (claims?.length) appendAbsorbPanel(claims, mergedCitsDeep);
     const fups = await getFollowUps(deepPrompt, reply.text);
     appendFollowUps(fups);
   } catch(e) {
