@@ -355,6 +355,38 @@ body::before{
   background:var(--cobalt-pale);border:1px solid rgba(37,99,168,.3);color:var(--cobalt);
 }
 .data-btn.import:hover{background:var(--cobalt);color:var(--paper)}
+/* ── TRUSTED SOURCES ── */
+.ts-input-row{display:flex;gap:6px;align-items:center}
+.ts-url-input{flex:1}
+.ts-add-btn{
+  font-family:var(--mono);font-size:11px;padding:0 14px;height:36px;
+  border:1px solid var(--cobalt);border-radius:var(--r);
+  background:transparent;color:var(--cobalt);cursor:pointer;
+  white-space:nowrap;transition:all .15s;flex-shrink:0;
+}
+.ts-add-btn:hover{background:var(--cobalt);color:var(--paper)}
+.ts-list{display:flex;flex-direction:column;gap:5px;margin-top:8px}
+.ts-item{
+  display:flex;align-items:center;gap:8px;
+  padding:7px 10px;border-radius:var(--r);
+  background:var(--paper-deep);border:1px solid var(--rule);
+}
+.ts-domain{
+  flex:1;font-family:var(--mono);font-size:12px;color:var(--ink-2);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.ts-tier{
+  font-family:var(--mono);font-size:9px;letter-spacing:.4px;
+  color:var(--forest);padding:2px 7px;border-radius:10px;
+  background:rgba(45,106,79,.1);border:1px solid rgba(45,106,79,.2);
+  flex-shrink:0;
+}
+.ts-del{
+  font-size:11px;color:var(--ink-5);background:none;border:none;
+  cursor:pointer;padding:2px 4px;border-radius:3px;flex-shrink:0;
+  transition:all .12s;
+}
+.ts-del:hover{color:var(--vermillion);background:rgba(192,57,43,.08)}
 .tc:hover{box-shadow:var(--shadow-lg);transform:translateY(-2px)}
 .tc-hdr{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
 .tc-title{font-family:var(--serif);font-size:17px;font-weight:600;color:var(--ink);line-height:1.3;letter-spacing:-.2px}
@@ -1241,6 +1273,19 @@ select.fi{cursor:pointer}
           </div>
         </div>
       </div>
+      <!-- Trusted Sources -->
+      <div class="field" id="trustedSourcesSection" style="border-top:1px solid var(--rule-light);padding-top:14px;margin-top:4px;">
+        <label style="display:flex;align-items:center;justify-content:space-between;">
+          Trusted Sources
+          <span style="font-family:var(--mono);font-size:9px;color:var(--ink-4);font-weight:400;letter-spacing:.3px;">Promoted to Primary tier</span>
+        </label>
+        <div class="fi-hint" style="margin-bottom:10px;">Add domains you trust. They will be treated as Primary sources and prioritised in research prompts.</div>
+        <div class="ts-input-row">
+          <input type="text" class="fi ts-url-input" id="tsUrlInput" placeholder="e.g. epw.in or data.worldbank.org" onkeydown="if(event.key==='Enter'){event.preventDefault();addTrustedSource();}">
+          <button class="ts-add-btn" onclick="addTrustedSource()">+ Add</button>
+        </div>
+        <div class="ts-list" id="tsList"></div>
+      </div>
       <div class="ptabs" id="providerTabs">
         <div class="ptab on" onclick="selectProvider('claude',this)">Claude</div>
         <div class="ptab" onclick="selectProvider('openai',this)">OpenAI</div>
@@ -1414,6 +1459,7 @@ let state = {
   keys: { claude:'', openai:'', gemini:'' },
   models: { claude:'claude-sonnet-4-6', openai:'gpt-4o', gemini:'gemini-2.0-flash' },
   customProviders: [],
+  trustedSources: [],
   webSearch: false,
   messages: [],  // current chat session
   ntColor: COLORS[0],
@@ -1432,6 +1478,7 @@ function save() {
     keys: state.keys, models: state.models,
     customProviders: state.customProviders, webSearch: state.webSearch,
     theme: state.theme, archivedTopicIds: state.archivedTopicIds,
+    trustedSources: state.trustedSources,
   })); } catch(e){}
 }
 function load() {
@@ -1442,6 +1489,7 @@ function load() {
     if (d.keys) state.keys = d.keys;
     if (d.models) state.models = d.models;
     if (d.customProviders) state.customProviders = d.customProviders;
+    if (d.trustedSources) state.trustedSources = d.trustedSources;
     if (d.webSearch !== undefined) state.webSearch = d.webSearch;
     if (d.theme) state.theme = d.theme;
     if (d.archivedTopicIds) state.archivedTopicIds = d.archivedTopicIds;
@@ -2284,8 +2332,14 @@ function classifyByRules(url) {
   if (!url) return null;
   try {
     const u = new URL(url);
-    const host = u.hostname.toLowerCase();
+    const host = u.hostname.toLowerCase().replace(/^www\./,'');
     const full = url.toLowerCase();
+    // User's personal trusted sources — always Primary
+    if (state.trustedSources?.length) {
+      for (const d of state.trustedSources) {
+        if (host === d || host.endsWith('.' + d)) return 'primary';
+      }
+    }
     for (const pat of SOURCE_RULES.primary)   if (pat.test(host) || pat.test(full)) return 'primary';
     for (const pat of SOURCE_RULES.secondary) if (pat.test(host) || pat.test(full)) return 'secondary';
     for (const pat of SOURCE_RULES.weak)       if (pat.test(full)) return 'weak';
@@ -2891,7 +2945,10 @@ function getActiveProvider() { return state.provider; }
 function buildSystem() {
   const t = getTopic();
   const topicCtx = t ? `You are helping research the topic: "${t.title}". ` : '';
-  return `You are MyResAssist, a precision research assistant. ${topicCtx}Provide well-structured, factual, insightful responses. Use **bold** for key terms. Be direct and substantive. When web search is available, use it for current information. When citing sources, prioritise in this order: (1) peer-reviewed academic sources, (2) government/official statistics, (3) major newswires (Reuters, AP, AFP, Bloomberg), (4) established quality outlets. Flag when a claim relies only on lower-tier sources.`;
+  const trustedCtx = state.trustedSources?.length
+    ? ` The user particularly trusts these sources and you should prioritise them when relevant: ${state.trustedSources.join(', ')}.`
+    : '';
+  return `You are MyResAssist, a precision research assistant. ${topicCtx}Provide well-structured, factual, insightful responses. Use **bold** for key terms. Be direct and substantive. When web search is available, use it for current information. When citing sources, prioritise in this order: (1) peer-reviewed academic sources, (2) government/official statistics, (3) major newswires (Reuters, AP, AFP, Bloomberg), (4) established quality outlets. Flag when a claim relies only on lower-tier sources.${trustedCtx}`;
 }
 
 async function callAI(messages) {
@@ -3453,12 +3510,57 @@ function openSettings() {
   document.getElementById('openaiModel').value = state.models.openai||'gpt-4o';
   document.getElementById('geminiModel').value = state.models.gemini||'gemini-2.0-flash';
   renderSavedProviders();
+  renderTrustedSources();
   syncThemeSwatches();
   const tab = state.provider.startsWith('custom:') ? 'custom' : state.provider;
   selectProvider(tab, null);
 }
 
 function closeSettings() { document.getElementById('settingsOverlay').classList.remove('open'); }
+
+// ── TRUSTED SOURCES ──
+function normaliseDomain(raw) {
+  // Strip protocol, www, trailing slashes, paths — keep hostname only
+  let s = raw.trim().toLowerCase();
+  s = s.replace(/^https?:\/\//,'').replace(/^www\./,'').split('/')[0].split('?')[0];
+  return s;
+}
+
+function addTrustedSource() {
+  const input = document.getElementById('tsUrlInput');
+  const raw = input.value.trim();
+  if (!raw) return;
+  const domain = normaliseDomain(raw);
+  if (!domain || !domain.includes('.')) { toast('Enter a valid domain (e.g. epw.in)', 'err'); return; }
+  if (state.trustedSources.includes(domain)) { toast('Already in your trusted list'); input.value=''; return; }
+  state.trustedSources.push(domain);
+  save();
+  input.value = '';
+  renderTrustedSources();
+  toast(`Added ${domain} as trusted source`);
+}
+
+function removeTrustedSource(domain) {
+  state.trustedSources = state.trustedSources.filter(d => d !== domain);
+  save();
+  renderTrustedSources();
+}
+
+function renderTrustedSources() {
+  const list = document.getElementById('tsList');
+  if (!list) return;
+  if (!state.trustedSources.length) {
+    list.innerHTML = `<div style="font-family:var(--mono);font-size:11px;color:var(--ink-5);padding:6px 2px;">No trusted sources added yet.</div>`;
+    return;
+  }
+  list.innerHTML = state.trustedSources.map(domain => `
+    <div class="ts-item">
+      <span class="ts-domain" title="${domain}">${domain}</span>
+      <span class="ts-tier">🟢 Primary</span>
+      <button class="ts-del" onclick="removeTrustedSource('${domain}')" title="Remove">✕</button>
+    </div>
+  `).join('');
+}
 
 function selectProvider(p, el) {
   activeTab = p;
