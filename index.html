@@ -56,8 +56,8 @@
   --paper-card: #141820;
   --ink:        #e2e8f0;
   --ink-2:      #b8c4d4;
-  --ink-3:      #7a8fa8;
-  --ink-4:      #465870;
+  --ink-3:      #9fb8d0;
+  --ink-4:      #6e8aa8;
   --ink-5:      #253040;
   --rule:       #1c2736;
   --rule-light: #162030;
@@ -116,8 +116,8 @@
   --paper-card: #122016;
   --ink:        #d4e8c8;
   --ink-2:      #a8c898;
-  --ink-3:      #78a068;
-  --ink-4:      #4a6c40;
+  --ink-3:      #96c080;
+  --ink-4:      #6a9458;
   --ink-5:      #2a3c28;
   --rule:       #1e3220;
   --rule-light: #172818;
@@ -262,7 +262,7 @@ body::before{
 .search-hit:hover{border-color:var(--cobalt);background:var(--cobalt-pale)}
 .search-hit-text{font-size:13.5px;color:var(--ink-2);line-height:1.5}
 .search-hit-text mark{background:rgba(180,83,9,.18);color:var(--ink);border-radius:2px;padding:0 2px}
-.search-hit-meta{font-family:var(--mono);font-size:10px;color:var(--ink-4)}
+.search-hit-meta{font-family:var(--mono);font-size:12px;color:var(--ink-4)}
 .search-empty{font-family:var(--mono);font-size:12px;color:var(--ink-4);text-align:center;padding:32px 0}
 
 .wall-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px}
@@ -508,7 +508,7 @@ body::before{
 [data-theme="slate"] .cc-text{font-family:var(--sans)}
 .cc:hover{box-shadow:var(--shadow)}
 .cc-top{display:flex;align-items:center;gap:8px;margin-bottom:7px}
-.cc-num{font-family:var(--mono);font-size:10px;color:var(--ink-4);letter-spacing:.8px;text-transform:uppercase}
+.cc-num{font-family:var(--mono);font-size:12px;color:var(--ink-4);letter-spacing:.8px;text-transform:uppercase}
 .conf-pip{
   padding:2px 7px;border-radius:3px;
   font-family:var(--mono);font-size:10px;letter-spacing:.4px;
@@ -553,9 +553,9 @@ body::before{
   border:1px solid var(--rule-light);
 }
 .cc-conf-block{flex:1;display:flex;flex-direction:column;gap:3px}
-.cc-conf-label{font-family:var(--mono);font-size:9px;color:var(--ink-4);letter-spacing:.8px;text-transform:uppercase}
+.cc-conf-label{font-family:var(--mono);font-size:11px;color:var(--ink-4);letter-spacing:.8px;text-transform:uppercase}
 .cc-conf-val{font-size:16px;font-weight:700;font-family:var(--mono);color:var(--ink)}
-.cc-conf-sub{font-family:var(--mono);font-size:9px;color:var(--ink-4)}
+.cc-conf-sub{font-family:var(--mono);font-size:11px;color:var(--ink-4)}
 .cc-conf-divider{width:1px;background:var(--rule);margin:0 2px}
 /* source quality bar */
 .sq-bar{display:flex;height:4px;border-radius:2px;overflow:hidden;gap:1px;margin-top:4px}
@@ -585,7 +585,7 @@ body::before{
   line-height:1.4;font-weight:500;
 }
 .src-link:hover{text-decoration:underline}
-.src-meta{font-family:var(--mono);font-size:10px;color:var(--ink-4);margin-top:1px;line-height:1.4}
+.src-meta{font-family:var(--mono);font-size:12px;color:var(--ink-4);margin-top:1px;line-height:1.4}
 .src-tier-badge{
   font-family:var(--mono);font-size:9px;letter-spacing:.4px;
   padding:1px 5px;border-radius:2px;flex-shrink:0;align-self:flex-start;
@@ -687,7 +687,7 @@ body::before{
 .bact.share:hover{background:var(--cobalt);color:var(--paper)}
 .bact.copied{border-color:var(--forest);color:var(--forest);background:rgba(45,106,79,.08)}
 .m-meta{
-  font-family:var(--mono);font-size:10px;color:var(--ink-5);
+  font-family:var(--mono);font-size:12px;color:var(--ink-4);
   margin-top:6px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;
 }
 .m-srcs{margin-top:8px;padding-top:8px;border-top:1px solid var(--rule-light)}
@@ -783,7 +783,7 @@ body::before{
 .kp-summary-label{font-family:var(--mono);font-size:9px;color:var(--ink-4);letter-spacing:.8px;text-transform:uppercase;margin-bottom:6px}
 .kp-summary-text{font-size:14px;color:var(--ink-2);line-height:1.65}
 .kp-summary-gaps{margin-top:10px;padding-top:10px;border-top:1px solid var(--rule-light)}
-.kp-gaps-label{font-family:var(--mono);font-size:9px;color:var(--amber);letter-spacing:.8px;text-transform:uppercase;margin-bottom:5px}
+.kp-gaps-label{font-family:var(--mono);font-size:11px;color:var(--amber);letter-spacing:.8px;text-transform:uppercase;margin-bottom:5px}
 .kp-gaps-text{font-size:13px;color:var(--ink-3);line-height:1.6;font-style:italic}
 .kp-gaps-btn{
   display:inline-flex;align-items:center;gap:5px;margin-top:10px;
@@ -835,8 +835,8 @@ body::before{
 }
 .intent-opt:hover{border-color:var(--cobalt);background:var(--cobalt-pale)}
 .intent-opt-title{font-family:var(--mono);font-size:12px;color:var(--ink);font-weight:600}
-.intent-opt-desc{font-size:12px;color:var(--ink-4);line-height:1.4}
-.intent-cancel{font-family:var(--mono);font-size:11px;color:var(--ink-4);background:none;border:none;cursor:pointer;align-self:flex-end;padding:4px}
+.intent-opt-desc{font-size:13px;color:var(--ink-3);line-height:1.4}
+.intent-cancel{font-family:var(--mono);font-size:12px;color:var(--ink-3);background:none;border:none;cursor:pointer;align-self:flex-end;padding:4px}
 .intent-cancel:hover{color:var(--ink)}
 /* ── DROP ZONE ── */
 .ci-drop-zone{
@@ -896,7 +896,7 @@ body::before{
 .ach.on{background:var(--cobalt);border-color:var(--cobalt);color:#fff;font-size:10px}
 .acr-body{flex:1;cursor:pointer}
 .acr-text{font-size:13px;color:var(--ink-2);line-height:1.5}
-.acr-conf{font-family:var(--mono);font-size:9px;margin-top:2px}
+.acr-conf{font-family:var(--mono);font-size:11px;margin-top:2px}
 .acr-conf.hi{color:var(--forest)}
 .acr-conf.me{color:var(--amber)}
 .acr-conf.lo{color:var(--slate)}
@@ -968,7 +968,7 @@ body::before{
 .fi::placeholder{color:var(--ink-5)}
 select.fi{cursor:pointer}
 .fi-row{display:flex;gap:7px;align-items:flex-end}
-.fi-hint{font-family:var(--mono);font-size:10px;color:var(--ink-3);line-height:1.5}
+.fi-hint{font-family:var(--mono);font-size:12px;color:var(--ink-3);line-height:1.5}
 .fi-hint a{color:var(--cobalt)}
 .fi-wrap{position:relative;display:flex;align-items:center}
 .fi-wrap .fi{padding-right:36px}
@@ -1354,7 +1354,7 @@ select.fi{cursor:pointer}
         <div class="field">
           <label style="display:flex;align-items:center;justify-content:space-between;">
             Model
-            <span id="geminiModelStatus" style="font-family:var(--mono);font-size:9px;color:var(--ink-4);font-weight:400;"></span>
+            <span id="geminiModelStatus" style="font-family:var(--mono);font-size:11px;color:var(--ink-3);font-weight:400;"></span>
           </label>
           <select class="fi" id="geminiModel">
             <option value="gemini-2.0-flash" selected>gemini-2.0-flash</option>
@@ -2610,7 +2610,7 @@ function updateClaimDrawer(card, claim) {
           </div>
           <span class="src-tier-badge ${s.tier||'unknown'}">${SOURCE_TIER_META[s.tier||'unknown']?.label||'Unknown'}</span>
         </div>`).join('')
-    : `<div class="src-none">No source citations were recorded for this claim. This typically happens when using a custom/local provider (Groq, Mistral, Ollama) that doesn't return grounding metadata, or when web search was off. Use <strong>Find better sources</strong> below to locate primary sources.</div>`;
+    : `<div class="src-none">No source citations were recorded for this claim. This typically happens when using a custom/local provider (Groq, Mistral, Ollama) that doesn't return grounding metadata, or when web search was off. Use <strong>Validate</strong> below to locate primary sources.</div>`;
 
   const llmPct = Math.round((claim.confidence||0)*100);
   const llmLabel = llmPct >= 70 ? 'High' : llmPct >= 35 ? 'Medium' : 'Low';
@@ -2632,18 +2632,93 @@ function updateClaimDrawer(card, claim) {
     </div>
     <div class="src-list">${srcRows}</div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-      <button class="cc-reresearch" onclick="reresearchClaim('${claim.id}')">↺ Find better sources</button>
+      <button class="cc-reresearch" onclick="showValidatePopup('${claim.id}')">⊕ Validate</button>
       <button class="cc-act del" onclick="deleteClaim('${claim.id}')">Remove claim</button>
     </div>
   `;
 }
 
-function reresearchClaim(claimId) {
+// ── VALIDATE CLAIM POPUP ──
+// Shows an intent-style popup with four research modes for a given claim.
+// On mobile, opens the chat panel first then defers the message send.
+
+let _validateClaimId = null;
+
+function showValidatePopup(claimId) {
   const t = getTopic();
   const claim = (t?.claims||[]).find(c=>c.id===claimId);
   if (!claim) return;
-  const q = `Find authoritative primary sources to verify or refute this claim: "${claim.text.substring(0,120)}". Prioritise in this order: (1) peer-reviewed studies or academic sources, (2) government or official statistics, (3) major newswires (Reuters, AP, AFP), (4) established quality outlets. Avoid SEO aggregators and sites without primary citations. State clearly whether current evidence supports, contradicts, or is ambiguous on the claim.`;
-  sendMessage(q);
+  _validateClaimId = claimId;
+
+  const snippet = claim.text.length > 80 ? claim.text.substring(0,80)+'…' : claim.text;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'intent-overlay';
+  overlay.id = 'validateOverlay';
+  overlay.innerHTML = `
+    <div class="intent-modal">
+      <div class="intent-title">⊕ Validate claim</div>
+      <div class="intent-src">${esc(snippet)}</div>
+      <div class="intent-opts">
+        <button class="intent-opt" onclick="dispatchValidate('credible')">
+          <div class="intent-opt-title">🟢 Find credible sources</div>
+          <div class="intent-opt-desc">Locate primary sources — peer-reviewed, official, or major newswires — that bear on this claim</div>
+        </button>
+        <button class="intent-opt" onclick="dispatchValidate('supporting')">
+          <div class="intent-opt-title">📊 Research supporting data</div>
+          <div class="intent-opt-desc">Find statistics, studies, and data that reinforce or quantify this claim</div>
+        </button>
+        <button class="intent-opt" onclick="dispatchValidate('contrary')">
+          <div class="intent-opt-title">⚖ Find contrary viewpoints</div>
+          <div class="intent-opt-desc">Seek credible counter-arguments, contradictions, or alternative interpretations</div>
+        </button>
+        <button class="intent-opt" onclick="dispatchValidate('all')">
+          <div class="intent-opt-title">⚡ Full validation</div>
+          <div class="intent-opt-desc">Run all three — credible sources, supporting data, and contrary views — then synthesise</div>
+        </button>
+      </div>
+      <button class="intent-cancel" onclick="closeValidatePopup()">Cancel</button>
+    </div>`;
+
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeValidatePopup(); });
+}
+
+function closeValidatePopup() {
+  const el = document.getElementById('validateOverlay');
+  if (el) el.remove();
+  _validateClaimId = null;
+}
+
+function dispatchValidate(mode) {
+  const claimId = _validateClaimId;
+  closeValidatePopup();
+  if (!claimId) return;
+
+  const t = getTopic();
+  const claim = (t?.claims||[]).find(c=>c.id===claimId);
+  if (!claim) return;
+
+  const claimText = claim.text.substring(0,180);
+
+  const prompts = {
+    credible:   `Find the most authoritative primary sources that bear on this claim: "${claimText}". Prioritise in order: (1) peer-reviewed studies or academic sources, (2) government or official statistics, (3) major newswires (Reuters, AP, AFP), (4) established quality outlets. For each source found, state whether it supports, contradicts, or is ambiguous on the claim. Conclude with an overall assessment of the claim's credibility.`,
+    supporting: `Find statistics, studies, and empirical data that support or quantify this claim: "${claimText}". Focus on primary data sources — official statistics, academic research, and verified surveys. Cite specific figures where available and note the recency and authority of each source.`,
+    contrary:   `Find credible counter-arguments, contradictions, or alternative interpretations of this claim: "${claimText}". Look for: (1) evidence that directly contradicts the claim, (2) expert dissent from established sources, (3) important nuances or caveats that qualify the claim. Be specific about what each source says and why it challenges the claim.`,
+    all:        `Conduct a full validation of this claim: "${claimText}".\n\n1. CREDIBLE SOURCES: Find the most authoritative sources (peer-reviewed, official, major newswires) that bear on this claim.\n2. SUPPORTING DATA: Identify statistics and empirical data that support or quantify it.\n3. CONTRARY VIEWS: Find credible counter-arguments or contradictions.\n4. SYNTHESIS: Based on the weight of evidence, is this claim well-supported, contested, or unsupported?\n\nBe specific, cite sources for each point, and clearly distinguish between what is established and what is disputed.`,
+  };
+
+  const q = prompts[mode] || prompts.credible;
+
+  // Mobile fix: detect mobile via FAB visibility (same pattern as researchGaps)
+  const fab = document.getElementById('mobileChatFab');
+  const isMobile = fab && getComputedStyle(fab).display !== 'none';
+  if (isMobile) {
+    openMobileChat();
+    setTimeout(() => sendMessage(q), 320);
+  } else {
+    sendMessage(q);
+  }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -3644,7 +3719,20 @@ function openSettings() {
   document.getElementById('geminiKey').value = state.keys.gemini||'';
   document.getElementById('claudeModel').value = state.models.claude||'claude-sonnet-4-6';
   document.getElementById('openaiModel').value = state.models.openai||'gpt-4o';
-  document.getElementById('geminiModel').value = state.models.gemini||'gemini-2.0-flash';
+
+  // Gemini: if saved model isn't in the current <select> options (e.g. after a fetch
+  // repopulated with API models), add it as an option so sel.value works reliably
+  const gemSel = document.getElementById('geminiModel');
+  const savedGemini = state.models.gemini || 'gemini-2.0-flash';
+  const gemOpts = Array.from(gemSel.options).map(o => o.value);
+  if (!gemOpts.includes(savedGemini)) {
+    const opt = document.createElement('option');
+    opt.value = savedGemini;
+    opt.textContent = savedGemini;
+    gemSel.insertBefore(opt, gemSel.firstChild);
+  }
+  gemSel.value = savedGemini;
+
   renderSavedProviders();
   renderTrustedSources();
   syncThemeSwatches();
