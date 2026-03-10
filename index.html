@@ -785,6 +785,9 @@ body::before{
 }
 .kp-summary-label{font-family:var(--mono);font-size:9px;color:var(--ink-4);letter-spacing:.8px;text-transform:uppercase;margin-bottom:6px}
 .kp-summary-text{font-size:14px;color:var(--ink-2);line-height:1.65}
+.kp-summary-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.kp-share-btn{font-family:var(--mono);font-size:11px;padding:3px 9px;border:1px solid rgba(37,99,168,.3);border-radius:var(--r);background:var(--cobalt-pale);color:var(--cobalt);cursor:pointer;transition:all .15s}
+.kp-share-btn:hover{background:var(--cobalt);color:var(--paper)}
 .kp-summary-gaps{margin-top:10px;padding-top:10px;border-top:1px solid var(--rule-light)}
 .kp-gaps-label{font-family:var(--mono);font-size:11px;color:var(--amber);letter-spacing:.8px;text-transform:uppercase;margin-bottom:5px}
 .kp-gaps-text{font-size:13px;color:var(--ink-3);line-height:1.6;font-style:italic}
@@ -1807,7 +1810,10 @@ function renderClaims() {
       // KP summary block — cached per topic
       const summaryHtml = t._kpSummary
         ? `<div class="kp-summary">
-             <div class="kp-summary-label">Research digest</div>
+             <div class="kp-summary-hdr">
+               <div class="kp-summary-label">Research digest</div>
+               <button class="kp-share-btn" onclick="shareKpSummary()">↗ Share digest</button>
+             </div>
              <div class="kp-summary-text">${md(t._kpSummary.overview)}</div>
              ${buildGapsHtml(t._kpSummary.gaps)}
            </div>`
@@ -1909,6 +1915,21 @@ function filterClaims(f, el) {
 // ── KP SUMMARY GENERATION ──
 
 // Build the gaps HTML block (shared between initial render and DOM update)
+function shareKpSummary() {
+  const t = getTopic();
+  if (!t?._kpSummary) return;
+  const topic = t.title || 'Research';
+  const text = `${topic} — Research Digest\n\n${t._kpSummary.overview}${t._kpSummary.gaps ? '\n\nResearch gaps:\n' + t._kpSummary.gaps : ''}\n\n— MyResAssist`;
+  if (navigator.share) {
+    navigator.share({ title: topic + ' Key Points', text }).catch(() => {});
+  } else {
+    navigator.clipboard?.writeText(text).then(() => {
+      const btn = document.querySelector('.kp-share-btn');
+      if (btn) { btn.textContent = '✓ Copied'; setTimeout(() => { btn.textContent = '↗ Share digest'; }, 2000); }
+    }).catch(() => toast('Copy failed', 'err'));
+  }
+}
+
 function buildGapsHtml(gaps) {
   if (!gaps) return '';
   return `<div class="kp-summary-gaps">
@@ -2027,7 +2048,10 @@ Write a concise research digest in two parts. Return ONLY valid JSON:
         const block = document.querySelector('.kp-summary');
         if (block) {
           block.innerHTML = `
-            <div class="kp-summary-label">Research digest</div>
+            <div class="kp-summary-hdr">
+              <div class="kp-summary-label">Research digest</div>
+              <button class="kp-share-btn" onclick="shareKpSummary()">↗ Share digest</button>
+            </div>
             <div class="kp-summary-text">${md(t._kpSummary.overview)}</div>
             ${buildGapsHtml(t._kpSummary.gaps)}
           `;
@@ -2738,7 +2762,7 @@ function dispatchValidate(mode) {
   const q = prompts[mode] || prompts.credible;
 
   // Mobile fix: detect mobile via FAB visibility (same pattern as researchGaps)
-  const fab = document.getElementById('mobileChatFab');
+  const fab = document.getElementById('chatFab');
   const isMobile = fab && getComputedStyle(fab).display !== 'none';
   if (isMobile) {
     openMobileChat();
