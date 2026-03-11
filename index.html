@@ -3368,7 +3368,7 @@ function appendAbsorbPanel(claims, citations) {
       <div class="absorb-title">↓ Absorb into knowledge base</div>
       <div class="absorb-claims">
         ${claims.map((c,i) => `
-          <div class="acr${isDupe[i] ? ' is-dupe' : ''}">
+          <div class="acr${isDupe[i] ? ' is-dupe' : ''}${c._isContradiction ? ' is-contra-absorb' : ''}">
             <div class="ach ${checkState[i]?'on':''}" onclick="toggleAbsorbCheck(this,${i})">
               ${checkState[i]?'✓':''}
             </div>
@@ -3376,7 +3376,9 @@ function appendAbsorbPanel(claims, citations) {
               <div class="acr-text">${esc(c.text)}</div>
               ${isDupe[i]
                 ? `<div class="acr-dupe">↩ Already in knowledge base</div>`
-                : `<div class="acr-conf ${c.confClass}">${c.confLabel} confidence</div>`
+                : c._isContradiction
+                  ? `<div class="acr-dupe" style="color:var(--violet,#7c3aed)">◆ Contradiction — will be flagged</div>`
+                  : `<div class="acr-conf ${c.confClass}">${c.confLabel} confidence</div>`
               }
             </div>
           </div>
@@ -3423,17 +3425,27 @@ function appendAbsorbPanel(claims, citations) {
       saveBtn.disabled = false;
 
       selected.forEach(c => {
-        const contra = t.claims.find(ex =>
-          ex.text.toLowerCase() !== c.text.toLowerCase() &&
-          roughContradict(ex.text, c.text)
-        );
+        // FIX 3: If the parser already identified this as a contradiction
+        // (from structured JSON), trust that flag directly.
+        // Only run roughContradict for regular claims where the flag isn't set.
+        let contraText = null;
+        if (c._isContradiction && c.contradicts) {
+          // Use the contradiction text from the structured response
+          contraText = c.contradicts;
+        } else {
+          const contra = t.claims.find(ex =>
+            ex.text.toLowerCase() !== c.text.toLowerCase() &&
+            roughContradict(ex.text, c.text)
+          );
+          contraText = contra ? contra.text : null;
+        }
         t.claims.push({
           id: uid(),
           text: c.text,
           why: c.why || '',
           confidence: c.confidence,
           sources: classifiedCitations.slice(0,3),
-          contradicts: contra ? contra.text : null,
+          contradicts: contraText,
           addedAt: Date.now(),
         });
         added++;
@@ -3628,21 +3640,31 @@ async function callCustom(messages, cp) {
 function parseClaimsFromRaw(raw) {
   if (!raw) return null;
 
-  // Step 1: strip reasoning/think tags (o-series, DeepSeek, some OSS)
+  // Step 1: strip reasoning/think tags
   let s = raw.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
 
-  // Step 2: try marker-based extraction first (most reliable for OSS models)
+  // Step 2: try marker-based extraction first
   const startM = 'RESEARCH_JSON_START', endM = 'RESEARCH_JSON_END';
   const si = s.indexOf(startM), ei = s.indexOf(endM);
   if (si >= 0 && ei > si) {
     const between = s.substring(si + startM.length, ei).trim();
     try {
       const p = JSON.parse(between);
-      if (p && (p.claims || p.points)) return normaliseStructured(p);
-    } catch(e) {}
+      if (p && (p.claims || p.points || p.contradictions)) return normaliseStructured(p);
+    } catch(e) {
+      // FIX 1: JSON truncated — recover complete point objects via regex
+      // Models like Cerebras hit token limits mid-JSON; rescue what's there
+      const recovered = recoverPartialJson(between, s);
+      if (recovered) return recovered;
+    }
+  } else if (si >= 0 && ei < 0) {
+    // Marker found but no end marker — truncated; try partial recovery
+    const partial = s.substring(si + startM.length).trim();
+    const recovered = recoverPartialJson(partial, s);
+    if (recovered) return recovered;
   }
 
-  // Step 3: strip markdown fences and try JSON block
+  // Step 3: strip fences and try full JSON parse
   s = s.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
 
   function tryParse(str) {
@@ -3665,53 +3687,108 @@ function parseClaimsFromRaw(raw) {
   }
 
   const parsed = tryParse(s);
-  if (!parsed) return null;
-  return normaliseStructured(parsed);
+  if (parsed) return normaliseStructured(parsed);
+
+  // FIX 2: Prose fallback — extract contradictions from prose when model ignores JSON instruction
+  // Models like Gemini, Groq, OpenRouter return rich prose with contradiction sections
+  const proseResult = extractProseContradictions(raw);
+  if (proseResult) return proseResult;
+
+  return null;
+}
+
+// FIX 1 helper: recover complete JSON objects from a truncated block using regex
+function recoverPartialJson(truncated, fullRaw) {
+  const claims = [];
+  const contradictions = [];
+
+  // Extract complete point objects (handles truncation mid-array)
+  const pointRe = /\{\s*"claim"\s*:\s*"((?:[^"\\]|\\.)*)"\s*,\s*"data"\s*:\s*"((?:[^"\\]|\\.)*)"\s*,\s*"citation"\s*:\s*"((?:[^"\\]|\\.)*)"\s*,\s*"confidence"\s*:\s*([\d.]+)\s*\}/g;
+  let m;
+  while ((m = pointRe.exec(truncated)) !== null) {
+    claims.push({ text: m[1], why: m[2], confidence: parseFloat(m[4]), contradicts: null, citation: m[3], _isPoint: true });
+  }
+
+  // Extract complete contradiction objects
+  const contraRe = /\{\s*"tension"\s*:\s*"((?:[^"\\]|\\.)*)"\s*,\s*"side_a"\s*:\s*"((?:[^"\\]|\\.)*)"\s*,\s*"side_b"\s*:\s*"((?:[^"\\]|\\.)*)"[^}]*\}/g;
+  while ((m = contraRe.exec(truncated)) !== null) {
+    contradictions.push({
+      text: m[1], why: `${m[2]} ↔ ${m[3]}`.trim(),
+      confidence: 0.7, contradicts: m[3], _isContradiction: true,
+    });
+  }
+
+  if (!claims.length && !contradictions.length) return null;
+  return { _structured: true, claims, contradictions, follow_on: [] };
+}
+
+// FIX 2 helper: extract contradictions from prose when model ignores JSON instruction
+function extractProseContradictions(text) {
+  const contradictions = [];
+
+  // Match common section headers used by Gemini, Groq, OpenRouter, etc.
+  const sectionRe = /(?:contradictions?|contradictory\s+perspectives?|conflicting\s+views?|uncertainties)[:\s*]+\n?([\s\S]{30,800}?)(?=\n\n(?:[A-Z#*]|\d+\.)|$)/gi;
+  let m;
+  while ((m = sectionRe.exec(text)) !== null) {
+    const section = m[1];
+    // Split by bullet/numbered list items
+    const items = section.split(/\n\s*[-*•]\s*|\n\s*\d+\.\s+/).filter(s => s.trim().length > 25);
+    items.forEach(item => {
+      const clean = item.replace(/\*\*/g, '').replace(/\*/g, '').trim();
+      if (clean.length > 25 && clean.length < 500) {
+        // Extract a tension label (text before first colon or dash)
+        const tension = clean.split(/[:—\-]\s+/)[0].trim().substring(0, 100);
+        const rest = clean.substring(tension.length).replace(/^[:—\-\s]+/, '').trim();
+        contradictions.push({
+          text: tension || clean.substring(0, 80),
+          why: rest || clean,
+          confidence: 0.6,
+          contradicts: rest || clean.substring(0, 100),
+          _isContradiction: true,
+        });
+      }
+    });
+  }
+
+  if (!contradictions.length) return null;
+  // Return a structured result with only contradictions (claims will come from extractClaims fallback)
+  return { _structured: true, claims: [], contradictions, follow_on: [] };
 }
 
 // Normalise any parsed structure into a flat claims array
-// Handles both legacy {claims:[]} and new {points:[], contradictions:[], follow_on:[]}
+// Handles legacy {claims:[]} and new {points:[], contradictions:[], follow_on:[]}
 function normaliseStructured(parsed) {
   // New structured format: {points, contradictions, follow_on, questions}
-  if (parsed.points || parsed.contradictions || parsed.follow_on || parsed.questions) {
+  // Also catches fallback {claims:[], contradictions:[]} schema
+  if (parsed.points || parsed.contradictions || parsed.follow_on || parsed.questions ||
+      (parsed.claims && !Array.isArray(parsed))) {
     const result = { _structured: true };
 
-    // Points → claims
-    if (Array.isArray(parsed.points)) {
-      result.claims = parsed.points.map(p => ({
-        text: String(p.claim || p.text || '').trim(),
-        why: String(p.data || p.why || p.rationale || '').trim(),
-        confidence: typeof p.confidence === 'number' ? p.confidence : 0.7,
-        contradicts: p.contradicts || null,
-        citation: p.citation || null,
-        _isPoint: true,
-      })).filter(c => c.text.length > 10);
-    } else {
-      result.claims = [];
-    }
+    const pointsArr = parsed.points || parsed.claims || [];
+    result.claims = Array.isArray(pointsArr) ? pointsArr.map(p => ({
+      text: String(p.claim || p.text || '').trim(),
+      why: String(p.data || p.why || p.rationale || '').trim(),
+      confidence: typeof p.confidence === 'number' ? p.confidence : 0.7,
+      contradicts: p.contradicts || null,
+      citation: p.citation || null,
+      _isPoint: true,
+    })).filter(c => c.text.length > 10) : [];
 
-    // Contradictions → claims with contradicts flag
-    if (Array.isArray(parsed.contradictions)) {
-      result.contradictions = parsed.contradictions.map(cx => ({
-        text: String(cx.tension || cx.text || '').trim(),
-        why: `${cx.side_a || ''} ↔ ${cx.side_b || ''}`.trim(),
-        confidence: typeof cx.confidence === 'number' ? cx.confidence : 0.5,
-        contradicts: cx.side_b || cx.side_a || 'see above',
-        citation: cx.citation || null,
-        _isContradiction: true,
-      })).filter(c => c.text.length > 5);
-    } else {
-      result.contradictions = [];
-    }
+    result.contradictions = Array.isArray(parsed.contradictions) ? parsed.contradictions.map(cx => ({
+      text: String(cx.tension || cx.text || '').trim(),
+      why: `${cx.side_a || ''} ↔ ${cx.side_b || ''}`.trim(),
+      confidence: typeof cx.confidence === 'number' ? cx.confidence : 0.6,
+      contradicts: cx.side_b || cx.side_a || cx.contradicts || 'see above',
+      citation: cx.citation || null,
+      _isContradiction: true,
+    })).filter(c => c.text.length > 5) : [];
 
-    // Follow-on questions (replace getFollowUps call)
     result.follow_on = Array.isArray(parsed.follow_on) ? parsed.follow_on :
                        Array.isArray(parsed.questions) ? parsed.questions : [];
-
     return result;
   }
 
-  // Legacy format: flat array or {claims:[]}
+  // Legacy flat array or {claims:[]}
   let claims = [];
   if (Array.isArray(parsed)) {
     claims = parsed;
@@ -3753,28 +3830,28 @@ async function extractClaims(query, response, citations, opts = {}) {
   const isReport = opts.mode === 'report';
 
   const prompt = isReport
-    ? `Extract up to ${limit} distinct factual claims from this research report. Focus on specific quantitative findings, named sources, and concrete conclusions — not general observations.
+    ? `Extract up to ${limit} distinct factual claims AND any explicit contradictions or tensions from this research report.
 
 Report text:
 ${response.substring(0, 8000)}
 ${existing ? `\nAlready captured (do not duplicate):\n${existing}` : ''}
 
 Output ONLY this JSON — no preamble, no markdown fences:
-{"claims":[{"text":"specific factual claim with numbers/names where available","why":"one sentence on significance","confidence":0.75,"contradicts":null}]}
+{"claims":[{"text":"specific factual claim with numbers/names where available","why":"one sentence on significance","confidence":0.75,"contradicts":null}],"contradictions":[{"tension":"name the tension in 1 sentence","side_a":"evidence on one side","side_b":"evidence on the other side","citation":"source"}]}
 
-Confidence guide: 0.85+ = named primary source cited (govt/academic/newswire). 0.65-0.84 = established outlet or expert cited. 0.40-0.64 = general finding, source unclear. 0.10-0.39 = inferred or anecdotal.
-"contradicts" = exact text of a contradicted existing claim above, or null.`
-    : `Extract ${limit > 4 ? '2-'+limit : '2-4'} key factual claims from this research exchange.
+Confidence guide: 0.85+ = named primary source (govt/academic/newswire). 0.65-0.84 = established outlet or expert. 0.40-0.64 = general finding. 0.10-0.39 = inferred/anecdotal.
+Only include contradictions where genuine opposing evidence exists — not just uncertainty.`
+    : `Extract ${limit > 4 ? '2-'+limit : '2-4'} key factual claims and any explicit contradictions from this research exchange.
 
 Query: "${query}"
 Response: ${response.substring(0,6000)}
 ${existing ? `\nExisting claims:\n${existing}` : ''}
 
-Output a JSON object with this exact structure — no other text, no markdown:
-{"claims":[{"text":"concise factual claim","why":"one sentence why it matters","confidence":0.75,"contradicts":null}]}
+Output ONLY this JSON — no other text, no markdown:
+{"claims":[{"text":"concise factual claim","why":"one sentence why it matters","confidence":0.75,"contradicts":null}],"contradictions":[{"tension":"name the tension","side_a":"evidence on one side","side_b":"evidence on the other side","citation":"source"}]}
 
 Confidence: 0.85+ = named primary source (govt/academic/newswire). 0.60-0.84 = established outlet/expert. 0.35-0.59 = general/aggregated. 0.10-0.34 = anecdotal/inferred.
-"contradicts" = exact text of a contradicted existing claim, or null.`;
+Only output contradictions where the response explicitly presents opposing evidence or conflicting expert views.`;
 
   try {
     let raw = '';
