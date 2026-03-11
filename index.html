@@ -468,9 +468,15 @@ body::before{
 .viz-leg-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
 .viz-close{float:right;background:none;border:none;cursor:pointer;font-size:18px;color:var(--ink-4);line-height:1;margin-top:-2px}
 .viz-close:hover{color:var(--ink)}
-.viz-canvas-wrap{position:relative;width:100%}
-canvas.viz-canvas{display:block;width:100%;cursor:pointer}
-.viz-tooltip{position:absolute;background:var(--paper);border:1px solid var(--rule);border-radius:6px;padding:7px 10px;font-size:12px;color:var(--ink-2);max-width:220px;line-height:1.4;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.15);display:none;z-index:10}
+.viz-canvas-wrap{position:relative;width:100%;overflow:hidden;display:flex;align-items:center;justify-content:center}
+canvas.viz-canvas{display:block;flex-shrink:0;cursor:grab;transition:none}
+canvas.viz-canvas:active{cursor:grabbing}
+.viz-zoom-bar{display:flex;align-items:center;gap:8px;margin-top:10px;padding:0 2px}
+.viz-zoom-btn{background:var(--paper-deep);border:1px solid var(--rule);border-radius:4px;width:28px;height:28px;cursor:pointer;font-size:14px;color:var(--ink-3);display:flex;align-items:center;justify-content:center;transition:all .15s}
+.viz-zoom-btn:hover{border-color:var(--cobalt);color:var(--cobalt)}
+.viz-zoom-label{font-family:var(--mono);font-size:11px;color:var(--ink-4);min-width:32px;text-align:center}
+.viz-tooltip{position:absolute;background:var(--paper);border:1px solid var(--rule);border-radius:6px;padding:7px 10px;font-size:12px;color:var(--ink-2);max-width:240px;line-height:1.4;pointer-events:none;box-shadow:0 2px 12px rgba(0,0,0,.2);display:none;z-index:10}
+@media(max-width:768px){.viz-overlay{padding:8px}.viz-modal{padding:16px;border-radius:8px}.viz-legend{gap:8px}.viz-leg-item{font-size:10px}}
 /* Key Points panel */
 .kp-panel{
   background:var(--paper-deep);border:1px solid var(--rule);
@@ -1977,6 +1983,12 @@ function showClaimViz() {
         <canvas class="viz-canvas" id="vizCanvas"></canvas>
         <div class="viz-tooltip" id="vizTooltip"></div>
       </div>
+      <div class="viz-zoom-bar">
+        <button class="viz-zoom-btn" onclick="vizZoom(-0.25)" title="Zoom out">−</button>
+        <span class="viz-zoom-label" id="vizZoomLabel">100%</span>
+        <button class="viz-zoom-btn" onclick="vizZoom(+0.25)" title="Zoom in">+</button>
+        <button class="viz-zoom-btn" onclick="vizZoomReset()" title="Reset zoom" style="width:auto;padding:0 8px;font-size:11px;font-family:var(--mono)">Reset</button>
+      </div>
       <div class="viz-legend">
         <div class="viz-leg-item"><div class="viz-leg-dot" style="background:#00d4ff;box-shadow:0 0 5px #00d4ff88"></div>High confidence (≥70%)</div>
         <div class="viz-leg-item"><div class="viz-leg-dot" style="background:#f59e0b"></div>Medium (35–69%)</div>
@@ -1990,18 +2002,43 @@ function showClaimViz() {
   overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
 
   let isMax = false;
+  let zoom = 1.0;
+
+  // Zoom helpers — operate on CSS transform, no re-render needed
+  window.vizZoom = (delta) => {
+    zoom = Math.max(0.5, Math.min(3.0, zoom + delta));
+    applyZoom();
+  };
+  window.vizZoomReset = () => { zoom = 1.0; applyZoom(); };
+
+  function applyZoom() {
+    const c = document.getElementById('vizCanvas');
+    if (c) c.style.transform = `scale(${zoom})`;
+    const lbl = document.getElementById('vizZoomLabel');
+    if (lbl) lbl.textContent = Math.round(zoom*100) + '%';
+  }
+
   window.toggleVizMax = () => {
     isMax = !isMax;
     const modal = document.getElementById('vizModal');
+    const wrap = modal?.querySelector('.viz-canvas-wrap');
     const btn = document.getElementById('vizMaxBtn');
     if (isMax) {
-      modal.style.cssText = 'max-width:none;width:calc(100vw - 48px);height:calc(100vh - 48px);display:flex;flex-direction:column;border-radius:8px;padding:20px';
+      modal.style.cssText = 'max-width:none;width:calc(100vw - 40px);height:calc(100vh - 40px);display:flex;flex-direction:column;border-radius:8px;padding:20px';
+      if (wrap) wrap.style.cssText = 'flex:1;min-height:0;overflow:hidden;display:flex;align-items:center;justify-content:center';
       btn.textContent = '⤡';
     } else {
       modal.style.cssText = '';
+      if (wrap) wrap.style.cssText = '';
       btn.textContent = '⤢';
     }
-    nodes = renderViz() || nodes;
+    // Defer renderViz until browser has laid out the new modal dimensions
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        nodes = renderViz() || nodes;
+        applyZoom();
+      });
+    });
   };
 
   function renderViz() {
@@ -2010,8 +2047,18 @@ function showClaimViz() {
     const modal = document.getElementById('vizModal');
     if (!canvas || !modal) return [];
 
-    const modalW = modal.clientWidth || 560;
-    const avail = isMax ? Math.min(modal.clientHeight - 150, modalW - 40) : Math.min(modalW - 48, 500);
+    // Reset transform before measuring
+    canvas.style.transform = 'scale(1)';
+
+    const wrap = modal.querySelector('.viz-canvas-wrap');
+    let avail;
+    if (isMax && wrap) {
+      // Use actual wrap dimensions now that layout has settled
+      avail = Math.min(wrap.clientWidth - 8, wrap.clientHeight - 8);
+    } else {
+      const modalW = modal.clientWidth || 560;
+      avail = Math.min(modalW - 48, 500);
+    }
     const SIZE = Math.max(300, avail);
     const CX = SIZE / 2, CY = SIZE / 2;
     const MAX_R = SIZE * 0.42;
@@ -2029,19 +2076,20 @@ function showClaimViz() {
 
     // Concentric rings with distinct colours and labels
     const rings = [
-      { r: (1-0.85)*MAX_R, fill:'rgba(0,212,255,.07)',   stroke:'rgba(0,212,255,.3)',   label:'85%+' },
-      { r: (1-0.65)*MAX_R, fill:'rgba(245,158,11,.05)',  stroke:'rgba(245,158,11,.25)', label:'65%' },
-      { r: (1-0.35)*MAX_R, fill:'rgba(239,68,68,.035)',  stroke:'rgba(239,68,68,.2)',   label:'35%' },
-      { r: MAX_R,           fill:'rgba(239,68,68,.015)', stroke:'rgba(100,100,100,.12)',label:'' },
+      { r: (1-0.85)*MAX_R, fill:'rgba(0,212,255,.07)',   stroke:'rgba(0,212,255,.35)',   label:'85%+' },
+      { r: (1-0.65)*MAX_R, fill:'rgba(245,158,11,.05)',  stroke:'rgba(245,158,11,.3)',   label:'65%' },
+      { r: (1-0.35)*MAX_R, fill:'rgba(239,68,68,.035)',  stroke:'rgba(239,68,68,.25)',   label:'35%' },
+      { r: MAX_R,           fill:'rgba(239,68,68,.015)', stroke:'rgba(120,120,120,.15)', label:'' },
     ];
     rings.forEach(ring => {
       ctx.beginPath(); ctx.arc(CX, CY, ring.r, 0, Math.PI*2);
       ctx.fillStyle = ring.fill; ctx.fill();
       ctx.strokeStyle = ring.stroke; ctx.lineWidth = 1; ctx.stroke();
       if (ring.label) {
-        ctx.font = '9px monospace'; ctx.fillStyle = ring.stroke;
+        ctx.font = 'bold 11px monospace';
+        ctx.fillStyle = 'rgba(255,255,255,.65)';
         ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
-        ctx.fillText(ring.label, CX, CY - ring.r + 1);
+        ctx.fillText(ring.label, CX, CY - ring.r + 2);
       }
     });
 
@@ -2049,24 +2097,25 @@ function showClaimViz() {
     const hasContra = claims.some(c => c.contradicts);
     if (hasContra) {
       ctx.save();
-      ctx.strokeStyle = 'rgba(167,139,250,.22)'; ctx.lineWidth = 1; ctx.setLineDash([3,5]);
+      ctx.strokeStyle = 'rgba(167,139,250,.28)'; ctx.lineWidth = 1; ctx.setLineDash([3,5]);
       ctx.beginPath(); ctx.moveTo(CX, CY);
       ctx.arc(CX, CY, MAX_R, 300*(Math.PI/180)-Math.PI/2, 360*(Math.PI/180)-Math.PI/2);
       ctx.lineTo(CX, CY); ctx.stroke(); ctx.setLineDash([]);
-      ctx.font = '9px monospace'; ctx.fillStyle = 'rgba(167,139,250,.4)';
+      ctx.font = 'bold 10px monospace'; ctx.fillStyle = 'rgba(167,139,250,.55)';
       ctx.textAlign = 'center';
       const la = 330*(Math.PI/180)-Math.PI/2;
-      ctx.fillText('CONTRA', CX+(MAX_R+16)*Math.cos(la), CY+(MAX_R+16)*Math.sin(la));
+      ctx.fillText('CONTRA', CX+(MAX_R+18)*Math.cos(la), CY+(MAX_R+18)*Math.sin(la));
       ctx.restore();
     }
 
-    // Topic label
+    // Topic label at centre — bolder, more readable
     const words = t.title.split(' '), half = Math.ceil(words.length/2);
+    const fontSize = Math.max(11, Math.round(SIZE/40));
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.font = `bold ${Math.max(9, Math.round(SIZE/46))}px sans-serif`;
-    ctx.fillStyle = 'rgba(255,255,255,.3)';
-    ctx.fillText(words.slice(0,half).join(' '), CX, CY-8);
-    ctx.fillText(words.slice(half).join(' '), CX, CY+8);
+    ctx.font = `600 ${fontSize}px sans-serif`;
+    ctx.fillStyle = 'rgba(255,255,255,.55)';
+    ctx.fillText(words.slice(0,half).join(' '), CX, CY - fontSize*0.65);
+    ctx.fillText(words.slice(half).join(' '), CX, CY + fontSize*0.65);
 
     // Compute positions
     const normal = claims.filter(c => !c.contradicts);
@@ -2109,22 +2158,24 @@ function showClaimViz() {
       const conf = node.claim.confidence || 0.5;
       const color = node.isContra ? '#a78bfa' : conf>=0.7 ? '#00d4ff' : conf>=0.35 ? '#f59e0b' : '#ef4444';
       ctx.save();
-      ctx.shadowColor = color; ctx.shadowBlur = conf>=0.7 ? 12 : 6;
+      ctx.shadowColor = color; ctx.shadowBlur = conf>=0.7 ? 14 : 7;
       if (node.isContra) {
         ctx.translate(node.x, node.y); ctx.rotate(Math.PI/4);
         ctx.fillStyle = color;
         ctx.fillRect(-nodeR*0.85,-nodeR*0.85,nodeR*1.7,nodeR*1.7);
-        ctx.shadowBlur=0; ctx.strokeStyle='rgba(255,255,255,.35)'; ctx.lineWidth=1;
+        ctx.shadowBlur=0; ctx.strokeStyle='rgba(255,255,255,.4)'; ctx.lineWidth=1.5;
         ctx.strokeRect(-nodeR*0.85,-nodeR*0.85,nodeR*1.7,nodeR*1.7);
       } else {
         ctx.fillStyle = color;
         ctx.beginPath(); ctx.arc(node.x,node.y,nodeR,0,Math.PI*2); ctx.fill();
-        ctx.shadowBlur=0; ctx.strokeStyle='rgba(255,255,255,.3)'; ctx.lineWidth=1;
+        ctx.shadowBlur=0; ctx.strokeStyle='rgba(255,255,255,.35)'; ctx.lineWidth=1.5;
         ctx.beginPath(); ctx.arc(node.x,node.y,nodeR,0,Math.PI*2); ctx.stroke();
       }
       ctx.restore();
     });
 
+    // Re-apply current zoom after redraw
+    applyZoom();
     return rawNodes;
   }
 
@@ -2133,18 +2184,80 @@ function showClaimViz() {
   const canvas = document.getElementById('vizCanvas');
   const tooltip = document.getElementById('vizTooltip');
 
-  const getScale = () => {
+  // Hit test: accounts for CSS zoom transform
+  const getHitCoords = (clientX, clientY) => {
     const r = canvas.getBoundingClientRect();
-    const S = parseInt(canvas.style.width) || 500;
-    return { sx: S/(r.width||S), sy: S/(r.height||S), r };
+    const SIZE = parseInt(canvas.style.width) || 500;
+    // Canvas centre on screen
+    const cx = r.left + r.width/2, cy = r.top + r.height/2;
+    // Inverse transform: (screen - centre) / zoom + SIZE/2
+    const logX = (clientX - cx) / zoom + SIZE/2;
+    const logY = (clientY - cy) / zoom + SIZE/2;
+    return { logX, logY };
   };
 
+  // Scroll-wheel zoom (desktop)
+  canvas.addEventListener('wheel', e => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -0.15 : 0.15;
+    zoom = Math.max(0.5, Math.min(3.0, zoom + delta));
+    applyZoom();
+  }, { passive: false });
+
+  // Pinch-to-zoom (mobile/trackpad)
+  let pinchStartDist = 0, pinchStartZoom = 1;
+  canvas.addEventListener('touchstart', e => {
+    if (e.touches.length === 2) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      pinchStartDist = Math.sqrt(dx*dx+dy*dy);
+      pinchStartZoom = zoom;
+      e.preventDefault();
+    }
+  }, { passive: false });
+
+  canvas.addEventListener('touchmove', e => {
+    if (e.touches.length === 2) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const dist = Math.sqrt(dx*dx+dy*dy);
+      zoom = Math.max(0.5, Math.min(3.0, pinchStartZoom * (dist / pinchStartDist)));
+      applyZoom();
+      e.preventDefault();
+    }
+  }, { passive: false });
+
+  // Single-tap on mobile: show tooltip for 2s then dismiss
+  let tapTimeout;
+  canvas.addEventListener('touchend', e => {
+    if (e.changedTouches.length === 1 && e.touches.length === 0) {
+      const t0 = e.changedTouches[0];
+      const {logX, logY} = getHitCoords(t0.clientX, t0.clientY);
+      let hit = null;
+      for (const node of nodes) {
+        const dx=logX-node.x, dy=logY-node.y;
+        if (Math.sqrt(dx*dx+dy*dy)<16) { hit=node; break; }
+      }
+      if (hit) {
+        clearTimeout(tapTimeout);
+        tooltip.style.display = 'block';
+        const conf=Math.round((hit.claim.confidence||0.5)*100);
+        const tier=conf>=70?'🟢':conf>=35?'🟡':'🔴';
+        tooltip.innerHTML=`<strong>${esc(hit.claim.text.substring(0,130))}${hit.claim.text.length>130?'…':''}</strong><br><span style="color:var(--ink-4);font-size:11px">${tier} ${conf}% confidence${hit.isContra?' · ◆ Contradiction':''}</span><br><span style="color:var(--cobalt);font-size:11px;cursor:pointer" onclick="document.getElementById('claimVizOverlay').remove();filterClaims('all',document.querySelector('.f-chip'));setTimeout(()=>{const c=document.querySelector('[data-claim-id=\"${hit.claim.id}\"]');if(c){c.scrollIntoView({behavior:'smooth',block:'center'});c.classList.add('cc-highlight');setTimeout(()=>c.classList.remove('cc-highlight'),1800);}},100)">→ Jump to claim</span>`;
+        // Position tooltip above the tap
+        const r = canvas.getBoundingClientRect();
+        tooltip.style.left = Math.min(t0.clientX - r.left - 10, r.width - 250) + 'px';
+        tooltip.style.top = Math.max(t0.clientY - r.top - 90, 4) + 'px';
+        tapTimeout = setTimeout(() => { tooltip.style.display='none'; }, 3500);
+      }
+    }
+  });
+
   canvas.addEventListener('mousemove', e => {
-    const {sx,sy,r} = getScale();
-    const mx=(e.clientX-r.left)*sx, my=(e.clientY-r.top)*sy;
+    const {logX, logY} = getHitCoords(e.clientX, e.clientY);
     let hit=null;
     for (const node of nodes) {
-      const dx=mx-node.x, dy=my-node.y;
+      const dx=logX-node.x, dy=logY-node.y;
       if (Math.sqrt(dx*dx+dy*dy)<14) { hit=node; break; }
     }
     if (hit) {
@@ -2152,7 +2265,8 @@ function showClaimViz() {
       const conf=Math.round((hit.claim.confidence||0.5)*100);
       const tier=conf>=70?'🟢':conf>=35?'🟡':'🔴';
       tooltip.innerHTML=`<strong>${esc(hit.claim.text.substring(0,130))}${hit.claim.text.length>130?'…':''}</strong><br><span style="color:var(--ink-4);font-size:11px">${tier} ${conf}% confidence${hit.isContra?' · ◆ Contradiction':''}</span>`;
-      const tx=Math.min(e.clientX-r.left+12,r.width-240), ty=Math.max(e.clientY-r.top-70,4);
+      const r = canvas.getBoundingClientRect();
+      const tx=Math.min(e.clientX-r.left+12,r.width-250), ty=Math.max(e.clientY-r.top-75,4);
       tooltip.style.left=tx+'px'; tooltip.style.top=ty+'px';
     } else {
       canvas.style.cursor='default'; tooltip.style.display='none';
@@ -2160,10 +2274,9 @@ function showClaimViz() {
   });
 
   canvas.addEventListener('click', e => {
-    const {sx,sy,r} = getScale();
-    const mx=(e.clientX-r.left)*sx, my=(e.clientY-r.top)*sy;
+    const {logX, logY} = getHitCoords(e.clientX, e.clientY);
     for (const node of nodes) {
-      const dx=mx-node.x, dy=my-node.y;
+      const dx=logX-node.x, dy=logY-node.y;
       if (Math.sqrt(dx*dx+dy*dy)<14) {
         overlay.remove();
         filterClaims('all', document.querySelector('.f-chip'));
@@ -2177,7 +2290,7 @@ function showClaimViz() {
   });
 
   canvas.addEventListener('mouseleave', () => { tooltip.style.display='none'; });
-  window.addEventListener('resize', () => { if(isMax) nodes=renderViz()||nodes; });
+  window.addEventListener('resize', () => { if(isMax) requestAnimationFrame(()=>requestAnimationFrame(()=>{ nodes=renderViz()||nodes; })); });
 }
 
 function shareKpSummary() {
